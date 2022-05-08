@@ -254,11 +254,11 @@ fullsetDF.to_csv("gun-violence_processed-data.csv")
 
 We have defined a function for this type of plot and called it for each of the scenarios.
 ```{r}
-initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title){
+initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title, colour){
   
   data=data.frame(name = all_labels, value = all_values)
 
-  totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = "#091CC1") + 
+  totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = colour) + 
     xlab(x_name) + 
     ylab(y_name) +
     ggtitle(plot_title)  
@@ -281,28 +281,33 @@ We want to see the distribution of the total number of incidents per each state.
 r_totalPerState <- py$totalPerState
 r_labels <- py$stateCodes
 
-initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of incidents", "Distribution of incidents per State")
+initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of incidents", "Distribution of incidents per State", "#091CC1")
 ```
 
 The general level of incidents can roughly be found somewhere in the interval [0,5000], but we do see some outliers - states have a significantly higher number of gun-involved cases.
 
 **Variable: Total number of cases that resulted in killings**
 ```{r}
-r_totalPerState <- py$totalKillingsPerState
+r_totalKillingsPerState <- py$totalKillingsPerState
 
-initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of killings", "Distribution of cases that resulted in killings per State")
+initial_eda_barplots(r_labels, r_totalKillingsPerState, "State Code", "Number of killings", "Distribution of cases that resulted in killings per State", "#652194")
 ```
 
 **Variable: Total number of cases that resulted in injuries**
 ```{r}
-r_totalPerState <- py$totalInjuriesPerState
+r_totalInjuriesPerState <- py$totalInjuriesPerState
 
-initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of injuries", "Distribution of cases that resulted in injuries per State")
+initial_eda_barplots(r_labels, r_totalInjuriesPerState, "State Code", "Number of injuries", "Distribution of cases that resulted in injuries per State", "#134611")
 ```
 
+Outlier values can be noticed in the last two charts as well. Given this observation, it would make sense to realize another chart - a Boxplot - that would specifically highlight this information. Even though boxplots can sometimes be missleading because of the loss of information, our purpose for this scenario is to identify those states that do not fall into the IQR (Interquantile Range), purpose which makes this type of chart appropiate.
+### **Chart Type:** Boxplot with three series
+**Variables: Total number of incidents, firearm deaths and injuries, respectively**
+```{r}
 
+```
 ### **Chart Type:** Histogram with two numeric variables
-We want to see the distribution of people involved in an incident, split by gender. We will use two Y axis and ...dataframs.
+We want to see the distribution of people involved in an incident, split by gender. We will use two Y axis and ...dataframes.
 ```{r}
 
 ```
@@ -319,7 +324,11 @@ We want to see the level of crime for each state proportional to the size of the
 ```{r}
 
 ```
+### **Chart Type:** Circular BarPlot with one numeric variable
 
+```{r}
+
+```
 
 
 
