@@ -1,0 +1,326 @@
+---
+title: "Data Visualization Project"
+author:
+  - name: Antonia Carasel (gr. 505)
+  - name: Mircea Vacariuc (gr. 506)
+output: html_document
+date: '2022-05-07'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# TO KEEP IN MIND - la fiecare grafic: ce vrem sa vedem (scris la inceput), tipul de grafic, datele folosite, interpretare
+
+# We can also add population for each state si sa vedem % incidents raportat la populatie
+
+# Another Data frame for state codes to use for graphs instead of full names
+# Daca avem timp la final, it might be nice sa facem si o predictie. Daca nu facem, sa stergem asta din descrierea initiala
+# We could also do stuff like PCA maybe,care ar fi mai usoare decat predictia
+
+# Niste categorii cu ce facem scrise la inceput
+
+# !!! Interactive plots. Zoom, tooltip, choosing a variable to display more (https://r-graph-gallery.com/interactive-charts.html)
+# Introduction
+The objective of this project is to perform an **anlysis of Gun Violence in US** in the past decade. The statistics have as their main purpose discovering trends and correlations between several factors and gun violence and to predict based on the data we have the number of incidents in the future.
+
+We have chosen to employ both *Python* and *R* as programming languages, the former being used for data processing and modelling purposes, and the latter for the actual visualization of the data gathered.
+
+Three data sets have been used, the primary one which includes the topic specific information, and two supporting sets that contain the population for each state according to the 2019 census and the state codes.
+
+The data source for the project is Kaggle.
+
+* Primary dataset: <https://www.kaggle.com/datasets/jameslko/gun-violence-data>
+* Population split by state: <https://www.kaggle.com/datasets/peretzcohen/2019-census-us-population-data-by-state>
+* US State codes: <https://worldpopulationreview.com/states/state-abbreviations>
+
+# Settings
+R specific libraries import
+```{r}
+library(reticulate)
+library(ggplot2)
+```
+
+Python specific libraries import
+```{python}
+import pandas as pd
+import numpy as np
+import datetime as dt
+```
+## Data extraction from the CSV files
+```{python}
+fileName = 'gun-violence.csv'
+fullsetDF = pd.read_csv(fileName)
+fileName = 'us_population_by_state.csv'
+populationDF = pd.read_csv(fileName)
+fileName = 'state_codes.csv'
+stateCodesDF = pd.read_csv(fileName)
+```
+# Data Cleaning
+
+# Check if there are any missing values in any other field. If there are, the value will be replaced with "N/A" - do we need to do this tho?
+
+# Remove unnecesary data
+
+# Fields "incident_id" and "incident_url_fields_missing", are not need for our analysis so they were removed.
+
+```{python}
+fullsetDF = fullsetDF.drop("incident_id", axis = 1)
+fullsetDF = fullsetDF.drop("incident_url_fields_missing", axis = 1)
+```
+# Processing
+We have split the date into months and years sine this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
+```{python}
+def splitDates(datesList):
+    months = []
+    years = []
+    for i in range(0, len(datesList)):
+        value = datesList[1]
+        splitDate = dt.datetime.strptime(value, "%Y-%m-%d")
+        monthName = splitDate.strftime('%b')
+        months.append(monthName)
+        years.append(splitDate.year)
+    fullsetDF.insert(1, "MONTH", months)
+    fullsetDF.insert(2, "YEAR", years)
+
+allDates = fullsetDF['date']
+splitDates(allDates)
+```
+# Congressional district? Is this needed? Maybe only if we add a little bit more information
+
+We would like to see if the type of venue has any impact on the number of incidents that occur. However, there are no clearly defined types and as such, we had to define them ourselves and see which fall into the specific category.The location can be mentioned in several fields, so we will use all of them for our search: `location_description`, `incident_characteristics` and `notes`.
+
+A new field was added called "Location Type"
+
+After this classification, the field "location_description" is no longer useful, so it was deleted. - MEH
+
+```{python}
+locationType = ["Bar/Club", "College", "School", "Apartments", "Park", "Restaurant"]
+locations = fullsetDF["location_description"]
+characteristics = fullsetDF["incident_characteristics"]
+notes = fullsetDF["notes"]
+```
+# cand luam location we need to ignore ce e in (). I need to take this into account - adauga asta in descriere
+# need to figure out cum sa facem aici cu bar/club ca in characteristics e pus impreuna, in location e doar unul dintre ele - adauga asta in descriere
+# for i in range (0, len(locations)):
+#     value = characteristics[i]
+#     if type(value) == float:
+#         for j in range (0, len(locationType)):
+#           if locationType[j].tolower() in value.tolower():
+# fullsetDF = fullsetDF.drop("location_description", axis = 1)
+
+The field `incident_characteristics` that can be used to find types of incidents. As described previously, we have defined certain categories and searched the text to find in which categories incident fall in.
+
+Unlike the previous example where only one venue was possible, here there can be more than one or more characteristics describing each incident, which required us to define different fields with a YES/NO response (binary categorical variables).
+```{python}
+incidentType = ["Home Invasion", "Mass Shooting", "Officer Involved", "Armed Robbery", "Drive-by", "Domestic Violence","Gang"]
+fieldNo = fullsetDF.columns.get_loc("incident_characteristics")
+matrix = []
+
+for i in range(0, len(incidentType)):
+    incidentTypeDiscovered = []
+    for j in range(0, len(characteristics)):
+        value = characteristics[j]
+        if type(value) != float:
+          if incidentType[i].lower() in value.lower():
+            incidentTypeDiscovered.append("YES")
+          else:
+            incidentTypeDiscovered.append("NO")
+        else:
+          incidentTypeDiscovered.append("UNKNOWN")
+    fieldName = incidentType[i]
+    fullsetDF.insert(fieldNo, fieldName, incidentTypeDiscovered)
+```
+
+The number of guns is not clearly stated. However, we can calculate it based on the number of values in the field "gun_stolen" (if there is no information, the number shown will be 0; it does not signify the absence of a gun but rather lack of sufficient information). A new field is created "No of Guns" which will be positioned right before the "gun_stolen" field.
+```{python}
+allInfoGuns = fullsetDF["gun_stolen"]
+noOfGuns = []
+for i in range (0, len(allInfoGuns)):
+    arrValuesEntry = []
+    value = allInfoGuns[i]
+    if type(value) == float:
+        # We should check here daca chiar e ok sa punem 0 sau ar trebui N/A or something like that. Am putea sa punem 1 because we assume there was at least 1 gun involved, it seems reasonable to make this assumption
+        noOfGuns.append(0)
+    else:
+        arrValuesEntry = value.split('||')
+        noOfGuns.append(len(arrValuesEntry))
+fieldNo = fullsetDF.columns.get_loc("gun_stolen")
+fullsetDF.insert(fieldNo, "NO OF GUNS", noOfGuns)
+```
+
+Field "participant_gender" offers information for all the people involved. We would like to get the actual number and add these fields to the dataframe.
+```{python}
+genderParticipants = fullsetDF["participant_gender"]
+female = []
+male = []
+for i in range (0, len(genderParticipants)):
+    value = genderParticipants[i]
+    if type(value) != float:
+        no = value.count("Female")
+        female.append(no)
+        no = value.count("Male")
+        male.append(no)
+    else:
+        female.append(0)
+        male.append(0)
+
+fieldNo = fullsetDF.columns.get_loc("participant_gender")
+fullsetDF.insert(fieldNo, "FEMALE PARTICIPANTS", female)
+fullsetDF.insert(fieldNo, "MALE PARTICIPANTS", male)
+```
+
+We would also like to make the distinction between the number of adults, teenagers and children involved in the incidents and we will use the same process as above on the field "participant_age_group".
+```{python}
+ageParticipants = fullsetDF["participant_age_group"]
+children = []
+teenagers = []
+adults = []
+for i in range (0, len(ageParticipants)):
+    value = ageParticipants[i]
+    if type(value) != float:
+        no = value.count("Adult 18+")
+        adults.append(no)
+        no = value.count("Teen 12-17")
+        teenagers.append(no)
+        no = value.count("Child 0-11")
+        children.append(no)
+    else:
+        adults.append(0)
+        teenagers.append(0)
+        children.append(0)
+fieldNo = fullsetDF.columns.get_loc("participant_age_group")
+fullsetDF.insert(fieldNo, "ADULT PARTICIPANTS", adults)
+fullsetDF.insert(fieldNo, "TEENAGER PARTICIPANTS", teenagers)
+fullsetDF.insert(fieldNo, "CHILDREN PARTICIPANTS", children)
+```
+# latitude and logitude - is this really helpful?
+
+# Renaming the fields. This step was necessary since we aim to use the exact names for plotting and they should be representative and without any additional characters such as "_".
+This is completely useless. Nu ma incanta cu ABSOLUT nimic, mai tare ma incurca to be honest
+fullsetDF = fullsetDF.rename(columns={
+     "date":"DATE",
+     "state":"STATE",
+     "n_killed":"NO PEOPLE KILLED",
+     "n_injured":"NO PEOPLE INJURED",
+     "gun_stolen":"STOLEN GUN",
+})
+
+# De terminat aici
+#city_or_county	address	n_killed	n_injured	incident_url	source_url	incident_url_fields_missing	congressional_district	gun_stolen	gun_type	incident_characteristics	latitude	location_description	longitude	n_guns_involved	notes	participant_age	participant_age_group	participant_gender	participant_name	participant_relationship	participant_status	participant_type	sources	state_house_district	state_senate_district
+
+
+# Definition of variables
+This section contains all the variables that will be used going further for plotting. Any data selection or processing will be done here.
+
+Calculating total numbers of
+  * incidents that occured 
+  * cases that resulted in killings
+  * cases that resulted in injuries
+in each state, regardless of month or year.
+```{python}
+totalPerState = []
+totalKillingsPerState = []
+totalInjuriesPerState = []
+
+for i in range (0, len(stateCodesDF)):
+    state = stateCodesDF["State"][i]
+
+    dfHelper = fullsetDF[fullsetDF["state"]==state]['state'].copy(deep=True)
+    totalPerState.append(dfHelper.count().item())
+
+    dfHelper = fullsetDF[(fullsetDF["state"] == state) & (fullsetDF['n_killed'] > 0)]['state'].copy(deep=True)
+    totalKillingsPerState.append(dfHelper.count().item())
+
+    dfHelper = fullsetDF[(fullsetDF["state"] == state) & (fullsetDF['n_injured'] > 0)]['state'].copy(deep=True)
+    totalInjuriesPerState.append(dfHelper.count().item())
+
+stateCodes = stateCodesDF["Code"]
+```
+
+# The clean file was accessed and saved in the respective dataframe.
+
+```{python}
+fullsetDF.to_csv("gun-violence_processed-data.csv")
+```
+# Printing a snapshot of the final dataframe to showcase the data we are now working with.
+
+
+
+# Graphs
+## Initial exploration of the dataset
+### **Chart Type:** Barplot with one numeric variable
+
+We have defined a function for this type of plot and called it for each of the scenarios.
+```{r}
+initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title){
+  
+  data=data.frame(name = all_labels, value = all_values)
+
+  totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = "#091CC1") + 
+    xlab(x_name) + 
+    ylab(y_name) +
+    ggtitle(plot_title)  
+
+  totalIncidentsBarPlot +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "white")
+  )
+}
+```
+
+**Variable: Total number of incidents that occured**
+
+We want to see the distribution of the total number of incidents per each state. We will use the `totalPerState` dataframe and the codes from the `stateCodes` array.
+
+```{r}
+r_totalPerState <- py$totalPerState
+r_labels <- py$stateCodes
+
+initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of incidents", "Distribution of incidents per State")
+```
+
+The general level of incidents can roughly be found somewhere in the interval [0,5000], but we do see some outliers - states have a significantly higher number of gun-involved cases.
+
+**Variable: Total number of cases that resulted in killings**
+```{r}
+r_totalPerState <- py$totalKillingsPerState
+
+initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of killings", "Distribution of cases that resulted in killings per State")
+```
+
+**Variable: Total number of cases that resulted in injuries**
+```{r}
+r_totalPerState <- py$totalInjuriesPerState
+
+initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of injuries", "Distribution of cases that resulted in injuries per State")
+```
+
+
+### **Chart Type:** Histogram with two numeric variables
+We want to see the distribution of people involved in an incident, split by gender. We will use two Y axis and ...dataframs.
+```{r}
+
+```
+
+**Chart Type:** Doughnut Chart
+We want
+Variables: Total number of incidents, total number of incidents per state => procent
+```{r}
+
+```
+
+**Chart Type:**
+We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
+```{r}
+
+```
+
+
+
+
+# Overall Conclusions
