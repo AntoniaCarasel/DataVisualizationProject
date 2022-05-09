@@ -239,6 +239,30 @@ for i in range (0, len(stateCodesDF)):
 stateCodes = stateCodesDF["Code"]
 ```
 
+Calculating total number of incidents per state and adding them into a dictionary.
+The stateswith incident percentages less than 1% will be categorisez as others.
+```{python}
+totalPerState = []
+incidentsStatesArray = np.array(fullsetDF['state'].to_numpy())
+for i in range(0, len(stateCodesDF)):
+    state = stateCodesDF["State"][i]
+    totalPerState.append(incidentsStatesArray[incidentsStatesArray == state].shape[0])
+        
+DictStateIncident = {"Others": 0}
+dfHelper = fullsetDF[fullsetDF["state"]==state]['state'].copy(deep=True)
+totalIncidents = len(dfHelper)
+
+incidentsPerStatePercentages = (np.array(totalPerState) / totalIncidents)
+for i in range(0,len(stateCodes)):
+    if incidentsPerStatePercentages[i] > 1:
+        DictStateIncident[stateCodes[i]] = round(incidentsPerStatePercentages[i], 2)
+    else:
+        DictStateIncident["Others"] = DictStateIncident["Others"] + round(incidentsPerStatePercentages[i], 2)
+        
+statesForDonut = np.array(list(DictStateIncident.keys()))
+valuesForDonut = np.array(list(DictStateIncident.values()))
+```
+
 # The clean file was accessed and saved in the respective dataframe.
 
 ```{python}
@@ -312,10 +336,28 @@ We want to see the distribution of people involved in an incident, split by gend
 
 ```
 
-**Chart Type:** Doughnut Chart
-We want
+### **Chart Type:** Doughnut Chart 
+We display the percentages of the total incidents per state as a doughnut chart
 Variables: Total number of incidents, total number of incidents per state => procent
 ```{r}
+r_labels <- py$statesForDonut
+r_percentagesPerState <- py$valuesForDonut
+
+data <- data.frame(name = r_labels, value = r_percentagesPerState)
+
+data$ymax = cumsum(r_percentagesPerState)
+data$ymin = c(0, head(data$ymax, n=-1))
+
+data$labelPosition <- (data$ymax + data$ymin) / 2
+data$label <- paste0(data$name, ": ", data$value, "%")
+
+
+ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
+  geom_rect() +
+  geom_label( x=3.5, aes(y=labelPosition, label=label), size=3) +
+  coord_polar(theta="y") +
+  xlim(c(2, 4)) +
+  theme_void()
 
 ```
 
