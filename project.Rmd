@@ -210,6 +210,13 @@ fullsetDF = fullsetDF.rename(columns={
 # De terminat aici
 #city_or_county	address	n_killed	n_injured	incident_url	source_url	incident_url_fields_missing	congressional_district	gun_stolen	gun_type	incident_characteristics	latitude	location_description	longitude	n_guns_involved	notes	participant_age	participant_age_group	participant_gender	participant_name	participant_relationship	participant_status	participant_type	sources	state_house_district	state_senate_district
 
+# The clean dataframe was saved in a new csv file.
+
+```{python}
+fullsetDF.to_csv("gun-violence_processed-data.csv")
+```
+# Printing a snapshot of the final dataframe to showcase the data we are now working with.
+
 
 # Definition of variables
 This section contains all the variables that will be used going further for plotting. Any data selection or processing will be done here.
@@ -239,12 +246,7 @@ for i in range (0, len(stateCodesDF)):
 stateCodes = stateCodesDF["Code"]
 ```
 
-# The clean file was accessed and saved in the respective dataframe.
 
-```{python}
-fullsetDF.to_csv("gun-violence_processed-data.csv")
-```
-# Printing a snapshot of the final dataframe to showcase the data we are now working with.
 
 
 
@@ -261,14 +263,15 @@ initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_ti
   totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = colour) + 
     xlab(x_name) + 
     ylab(y_name) +
-    ggtitle(plot_title)  
+    ggtitle(plot_title)
 
   totalIncidentsBarPlot +
     theme(
       plot.title = element_text(hjust = 0.5),
       panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "white")
+      panel.background = element_rect(fill = "white") 
+      axis.text.x = element_text(angle = 90, vjust = 0.5)
   )
 }
 ```
@@ -301,11 +304,105 @@ initial_eda_barplots(r_labels, r_totalInjuriesPerState, "State Code", "Number of
 ```
 
 Outlier values can be noticed in the last two charts as well. Given this observation, it would make sense to realize another chart - a Boxplot - that would specifically highlight this information. Even though boxplots can sometimes be missleading because of the loss of information, our purpose for this scenario is to identify those states that do not fall into the IQR (Interquantile Range), purpose which makes this type of chart appropiate.
+
+```{python}
+
+```
+
 ### **Chart Type:** Boxplot with three series
 **Variables: Total number of incidents, firearm deaths and injuries, respectively**
 ```{r}
 
 ```
+
+We have decided to further investigate the outlier states so as to better understand the factors that led to an increased number of incidents involving firearms.
+
+The first type of analysis targets the age categories. For this purpose, the data was visualized in separate doughnut charts as seen below.
+
+Calcualting the percentage of Child, Teenager and Adult participants for each state.
+```{python}
+outlierList = ["Pennsylvania", "California", "Colorado"]
+totalsStates = []
+for i in range(0,len(outlierList)):
+    state = outlierList[i]
+    array = []
+    dfHelper = fullsetDF[fullsetDF["state"]==state]['CHILDREN PARTICIPANTS'].copy(deep=True)
+    array.append(dfHelper.sum())
+
+    dfHelper = fullsetDF[fullsetDF["state"]==state]['TEENAGER PARTICIPANTS'].copy(deep=True)
+    array.append(dfHelper.sum())
+
+    dfHelper = fullsetDF[fullsetDF["state"]==state]['ADULT PARTICIPANTS'].copy(deep=True)
+    array.append(dfHelper.sum())
+
+    totalsStates.append(array)
+
+# Percentages per state for each group
+for i in range(0, len(outlierList)):
+    total = totalsStates[i][0] + totalsStates[i][1] + totalsStates[i][2]
+    for j in range(0, 3):
+        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))
+
+# Percentages per group for each state
+for j in range(0, 3):
+    total = totalsStates[0][j] + totalsStates[1][j] + totalsStates[2][j]
+    for i in range(0, len(outlierList)):
+        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))
+```
+
+### **Chart Type:** Doughnut Plot
+
+**Variables: Percentage of each age group involved in an incident per state and across the states.**
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+We would also like to have an overview of the age groups across the outlier states to see if there are any differences between the states. We could assume that some of the states have a higher percentage of teenagers involved in gun-voilence than others.
+
+```{r}
+
+```
+
+The differences between the states are
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ### **Chart Type:** Histogram with two numeric variables
 We want to see the distribution of people involved in an incident, split by gender. We will use two Y axis and ...dataframes.
 ```{r}
