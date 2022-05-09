@@ -1,0 +1,3 @@
+*.csv
+# ignore generated html files,
+*.html

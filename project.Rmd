@@ -246,8 +246,56 @@ for i in range (0, len(stateCodesDF)):
 stateCodes = stateCodesDF["Code"]
 ```
 
+Calculating total number of incidents per state and adding them into a dictionary.
+The stateswith incident percentages less than 1% will be categorisez as others.
+```{python}
+totalPerState = []
+incidentsStatesArray = np.array(fullsetDF['state'].to_numpy())
+for i in range(0, len(stateCodesDF)):
+    state = stateCodesDF["State"][i]
+    totalPerState.append(incidentsStatesArray[incidentsStatesArray == state].shape[0])
+        
+DictStateIncident = {"Others": 0}
+dfHelper = fullsetDF[fullsetDF["state"]==state]['state'].copy(deep=True)
+totalIncidents = len(dfHelper)
 
+incidentsPerStatePercentages = (np.array(totalPerState) / totalIncidents)
+for i in range(0,len(stateCodes)):
+    if incidentsPerStatePercentages[i] > 1:
+        DictStateIncident[stateCodes[i]] = round(incidentsPerStatePercentages[i], 2)
+    else:
+        DictStateIncident["Others"] = DictStateIncident["Others"] + round(incidentsPerStatePercentages[i], 2)
+        
+statesForDonut = np.array(list(DictStateIncident.keys()))
+valuesForDonut = np.array(list(DictStateIncident.values()))
+```
 
+Calculating the number of incidents per region: NE, NW, SW, SE.
+We consider the center position the geographic center of the United States. This is a point approximately 32 km north of Belle Fourche, South Dakota at LAT. 39°50' LONG. −98°35'
+
+```{python}
+DictIncidentsPerRegion = {"NE": 0, "NW": 0, "SW": 0, "SE": 0}
+
+incidentsCoordinates = fullsetDF[["latitude", "longitude"]]
+
+for i in range(0, len(incidentsCoordinates)):
+    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] > -98:
+        DictIncidentsPerRegion["NE"] += 1
+    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] < -98:
+        DictIncidentsPerRegion["NW"] += 1
+    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] < -98:
+        DictIncidentsPerRegion["SW"] += 1
+    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] > -98:
+        DictIncidentsPerRegion["SE"] += 1
+
+totalNoIncidents = sum(DictIncidentsPerRegion.values())
+  
+regions = np.array(list(DictIncidentsPerRegion.keys()))
+incidentsPerRegions = np.round(np.array((np.array(list(DictIncidentsPerRegion.values())) / totalNoIncidents) * 100), 2)
+
+```
+
+# The clean file was accessed and saved in the respective dataframe.
 
 
 # Graphs
@@ -409,11 +457,57 @@ We want to see the distribution of people involved in an incident, split by gend
 
 ```
 
-**Chart Type:** Doughnut Chart
-We want
+### **Chart Type:** Doughnut Chart 
+We display the percentages of the total incidents per state as a doughnut chart
 Variables: Total number of incidents, total number of incidents per state => procent
 ```{r}
+donut_plot <- function(all_labels, all_values) {
+  
+data = data.frame(name = all_labels, value = all_values)
 
+data$ymax = cumsum(all_values)
+data$ymin = c(0, head(data$ymax, n=-1))
+
+ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
+  geom_rect() +
+  coord_polar(theta="y") +
+  xlim(c(2, 4))
+}
+```
+
+```{r}
+donut_plot_labels <- function(all_labels, all_values) {
+  
+data = data.frame(name = all_labels, value = all_values)
+
+data$ymax = cumsum(all_values)
+data$ymin = c(0, head(data$ymax, n=-1))
+
+data$labelPosition <- (data$ymax + data$ymin) / 2
+data$label <- paste0(data$name, ": ", data$value, "%")
+
+ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
+  geom_rect() +
+  geom_text( x=2, aes(y=labelPosition, label=label, color=name), size=3) +
+    scale_fill_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2") +
+  coord_polar(theta="y") +
+  xlim(c(-1, 4))
+}
+```
+
+```{r}
+r_labels <- py$statesForDonut
+r_percentagesPerState <- py$valuesForDonut
+
+donut_plot(r_labels, r_percentagesPerState)
+```
+
+```{r}
+r_regions <- py$regions
+r_incidentsPerRegion <- py$incidentsPerRegions
+
+donut_plot_labels(r_regions, r_incidentsPerRegion)
 ```
 
 **Chart Type:**
