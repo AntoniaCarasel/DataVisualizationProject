@@ -167,8 +167,8 @@ for i in range (0, len(genderParticipants)):
         male.append(0)
 
 fieldNo = fullsetDF.columns.get_loc("participant_gender")
-fullsetDF.insert(fieldNo, "FEMALE PARTICIPANTS", female)
-fullsetDF.insert(fieldNo, "MALE PARTICIPANTS", male)
+fullsetDF.insert(fieldNo, "FEMALES", female)
+fullsetDF.insert(fieldNo, "MALES", male)
 ```
 
 We would also like to make the distinction between the number of adults, teenagers and children involved in the incidents and we will use the same process as above on the field "participant_age_group".
@@ -191,9 +191,9 @@ for i in range (0, len(ageParticipants)):
         teenagers.append(0)
         children.append(0)
 fieldNo = fullsetDF.columns.get_loc("participant_age_group")
-fullsetDF.insert(fieldNo, "ADULT PARTICIPANTS", adults)
-fullsetDF.insert(fieldNo, "TEENAGER PARTICIPANTS", teenagers)
-fullsetDF.insert(fieldNo, "CHILDREN PARTICIPANTS", children)
+fullsetDF.insert(fieldNo, "ADULTS", adults)
+fullsetDF.insert(fieldNo, "TEENAGERS", teenagers)
+fullsetDF.insert(fieldNo, "CHILDREN", children)
 ```
 # latitude and logitude - is this really helpful?
 
@@ -245,58 +245,6 @@ for i in range (0, len(stateCodesDF)):
 
 stateCodes = stateCodesDF["Code"]
 ```
-
-Calculating total number of incidents per state and adding them into a dictionary.
-The stateswith incident percentages less than 1% will be categorisez as others.
-```{python}
-totalPerState = []
-incidentsStatesArray = np.array(fullsetDF['state'].to_numpy())
-for i in range(0, len(stateCodesDF)):
-    state = stateCodesDF["State"][i]
-    totalPerState.append(incidentsStatesArray[incidentsStatesArray == state].shape[0])
-        
-DictStateIncident = {"Others": 0}
-dfHelper = fullsetDF[fullsetDF["state"]==state]['state'].copy(deep=True)
-totalIncidents = len(dfHelper)
-
-incidentsPerStatePercentages = (np.array(totalPerState) / totalIncidents)
-for i in range(0,len(stateCodes)):
-    if incidentsPerStatePercentages[i] > 1:
-        DictStateIncident[stateCodes[i]] = round(incidentsPerStatePercentages[i], 2)
-    else:
-        DictStateIncident["Others"] = DictStateIncident["Others"] + round(incidentsPerStatePercentages[i], 2)
-        
-statesForDonut = np.array(list(DictStateIncident.keys()))
-valuesForDonut = np.array(list(DictStateIncident.values()))
-```
-
-Calculating the number of incidents per region: NE, NW, SW, SE.
-We consider the center position the geographic center of the United States. This is a point approximately 32 km north of Belle Fourche, South Dakota at LAT. 39°50' LONG. −98°35'
-
-```{python}
-DictIncidentsPerRegion = {"NE": 0, "NW": 0, "SW": 0, "SE": 0}
-
-incidentsCoordinates = fullsetDF[["latitude", "longitude"]]
-
-for i in range(0, len(incidentsCoordinates)):
-    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] > -98:
-        DictIncidentsPerRegion["NE"] += 1
-    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] < -98:
-        DictIncidentsPerRegion["NW"] += 1
-    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] < -98:
-        DictIncidentsPerRegion["SW"] += 1
-    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] > -98:
-        DictIncidentsPerRegion["SE"] += 1
-
-totalNoIncidents = sum(DictIncidentsPerRegion.values())
-  
-regions = np.array(list(DictIncidentsPerRegion.keys()))
-incidentsPerRegions = np.round(np.array((np.array(list(DictIncidentsPerRegion.values())) / totalNoIncidents) * 100), 2)
-
-```
-
-# The clean file was accessed and saved in the respective dataframe.
-
 
 # Graphs
 ## Initial exploration of the dataset
@@ -360,63 +308,98 @@ Outlier values can be noticed in the last two charts as well. Given this observa
 ### **Chart Type:** Boxplot with three series
 **Variables: Total number of incidents, firearm deaths and injuries, respectively**
 ```{r}
+r_totalPerState <- py$totalPerState
+r_totalKillingsPerState <- py$totalKillingsPerState
+r_totalInjuriesPerState <- py$totalInjuriesPerState
 
+p <- boxplot(r_totalPerState, r_totalKillingsPerState, r_totalInjuriesPerState,
+main = "Outlier variables - States that have higher criminality",
+names = c("Number of incidents", "Number of killings", "Number of injuries"),
+col = c("#091CC1","#652194", "#134611")
+)
+p
 ```
 
+### **Chart Type:** Doughnut Plot
 We have decided to further investigate the outlier states so as to better understand the factors that led to an increased number of incidents involving firearms.
 
 The first type of analysis targets the age categories. For this purpose, the data was visualized in separate doughnut charts as seen below.
 
-Calcualting the percentage of Child, Teenager and Adult participants for each state.
+Calculating the percentage of Child, Teenager and Adult participants for each state.
 ```{python}
-outlierList = ["Pennsylvania", "California", "Colorado"]
-totalsStates = []
+outlierList = np.array(["Pennsylvania", "California", "Colorado"])
+totalsStates = np.zeros(shape=(len(outlierList),3), dtype = float)
+categories = np.array(["CHILDREN", "TEENAGERS", "ADULTS"])
+
 for i in range(0,len(outlierList)):
     state = outlierList[i]
     array = []
-    dfHelper = fullsetDF[fullsetDF["state"]==state]['CHILDREN PARTICIPANTS'].copy(deep=True)
-    array.append(dfHelper.sum())
 
-    dfHelper = fullsetDF[fullsetDF["state"]==state]['TEENAGER PARTICIPANTS'].copy(deep=True)
-    array.append(dfHelper.sum())
+    dfHelper = fullsetDF[fullsetDF["state"]==state][categories[0]].copy(deep=True)
+    totalsStates[i][0] = dfHelper.sum().item()
 
-    dfHelper = fullsetDF[fullsetDF["state"]==state]['ADULT PARTICIPANTS'].copy(deep=True)
-    array.append(dfHelper.sum())
+    dfHelper = fullsetDF[fullsetDF["state"]==state][categories[1]].copy(deep=True)
+    totalsStates[i][1] = dfHelper.sum().item()
 
-    totalsStates.append(array)
+    dfHelper = fullsetDF[fullsetDF["state"]==state][categories[2]].copy(deep=True)
+    totalsStates[i][2] = dfHelper.sum().item()
 
 # Percentages per state for each group
 for i in range(0, len(outlierList)):
     total = totalsStates[i][0] + totalsStates[i][1] + totalsStates[i][2]
     for j in range(0, 3):
-        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))
+        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))*100
+```
 
+```{r}
+donut_plot_labels <- function(all_labels, all_values) {
+  
+data = data.frame(name = all_labels, value = all_values)
+
+data$ymax = cumsum(all_values)
+data$ymin = c(0, head(data$ymax, n=-1))
+
+data$labelPosition <- (data$ymax + data$ymin) / 2
+data$label <- paste0(data$name, ": ", data$value, "%")
+
+ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
+  geom_rect() +
+  geom_text( x=2, aes(y=labelPosition, label=label, color=name), size=3) +
+  scale_fill_brewer(palette = "Dark2") +
+  scale_color_brewer(palette = "Dark2") +
+  coord_polar(theta="y") +
+  xlim(c(-1, 4))
+}
+```
+
+**Variables: Percentage of each age group involved in an incident per state and across the states.**
+```{r}
+r_categories <- py$categories
+matrix <- py$totalsStates
+for(row in 1 : nrow(matrix)){
+  r_totalsStates<- matrix[row,]
+  print(donut_plot_labels(r_categories, r_totalsStates))
+}
+```
+
+We would also like to have an overview of the age groups across the outlier states to see if there are any differences between the states. We could assume that some of the states have a higher percentage of teenagers involved in gun-voilence than others.
+```{python}
 # Percentages per group for each state
 for j in range(0, 3):
     total = totalsStates[0][j] + totalsStates[1][j] + totalsStates[2][j]
     for i in range(0, len(outlierList)):
-        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))
-```
-
-### **Chart Type:** Doughnut Plot
-
-**Variables: Percentage of each age group involved in an incident per state and across the states.**
-```{r}
-
+        totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))*100
+totalsStates = totalsStates.transpose()
 ```
 
 ```{r}
+r_outlierList <- py$outlierList
 
-```
-
-```{r}
-
-```
-
-We would also like to have an overview of the age groups across the outlier states to see if there are any differences between the states. We could assume that some of the states have a higher percentage of teenagers involved in gun-voilence than others.
-
-```{r}
-
+matrix <- py$totalsStates
+for(row in 1 : nrow(matrix)){
+  r_totalsStates<- matrix[row,]
+  print(donut_plot_labels(r_outlierList, r_totalsStates))
+}
 ```
 
 The differences between the states are
@@ -457,9 +440,35 @@ We want to see the distribution of people involved in an incident, split by gend
 
 ```
 
-### **Chart Type:** Doughnut Chart 
-We display the percentages of the total incidents per state as a doughnut chart
+## **Chart Type:** Doughnut Chart
+We want
+
 Variables: Total number of incidents, total number of incidents per state => procent
+
+Calculating total number of incidents per state and adding them into a dictionary.
+The states with incident percentages less than 1% will be categorized as others.
+```{python}
+totalPerState = []
+incidentsStatesArray = np.array(fullsetDF['state'].to_numpy())
+for i in range(0, len(stateCodesDF)):
+    state = stateCodesDF["State"][i]
+    totalPerState.append(incidentsStatesArray[incidentsStatesArray == state].shape[0])
+        
+DictStateIncident = {"Others": 0}
+dfHelper = fullsetDF[fullsetDF["state"]==state]['state'].copy(deep=True)
+totalIncidents = len(dfHelper)
+
+incidentsPerStatePercentages = (np.array(totalPerState) / totalIncidents)
+for i in range(0,len(stateCodes)):
+    if incidentsPerStatePercentages[i] > 1:
+        DictStateIncident[stateCodes[i]] = round(incidentsPerStatePercentages[i], 2)
+    else:
+        DictStateIncident["Others"] = DictStateIncident["Others"] + round(incidentsPerStatePercentages[i], 2)
+        
+statesForDonut = np.array(list(DictStateIncident.keys()))
+valuesForDonut = np.array(list(DictStateIncident.values()))
+```
+
 ```{r}
 donut_plot <- function(all_labels, all_values) {
   
@@ -476,31 +485,35 @@ ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) +
 ```
 
 ```{r}
-donut_plot_labels <- function(all_labels, all_values) {
-  
-data = data.frame(name = all_labels, value = all_values)
-
-data$ymax = cumsum(all_values)
-data$ymin = c(0, head(data$ymax, n=-1))
-
-data$labelPosition <- (data$ymax + data$ymin) / 2
-data$label <- paste0(data$name, ": ", data$value, "%")
-
-ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
-  geom_rect() +
-  geom_text( x=2, aes(y=labelPosition, label=label, color=name), size=3) +
-    scale_fill_brewer(palette = "Dark2") +
-  scale_color_brewer(palette = "Dark2") +
-  coord_polar(theta="y") +
-  xlim(c(-1, 4))
-}
-```
-
-```{r}
 r_labels <- py$statesForDonut
 r_percentagesPerState <- py$valuesForDonut
 
 donut_plot(r_labels, r_percentagesPerState)
+```
+
+Calculating the number of incidents per region: NE, NW, SW, SE.
+
+We consider the center position the geographic center of the United States. This is a point approximately 32 km north of Belle Fourche, South Dakota at LAT. 39°50' LONG. −98°35'
+```{python}
+DictIncidentsPerRegion = {"NE": 0, "NW": 0, "SW": 0, "SE": 0}
+
+incidentsCoordinates = fullsetDF[["latitude", "longitude"]]
+
+for i in range(0, len(incidentsCoordinates)):
+    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] > -98:
+        DictIncidentsPerRegion["NE"] += 1
+    if incidentsCoordinates["latitude"][i] > 39 and incidentsCoordinates["longitude"][i] < -98:
+        DictIncidentsPerRegion["NW"] += 1
+    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] < -98:
+        DictIncidentsPerRegion["SW"] += 1
+    if incidentsCoordinates["latitude"][i] < 39 and incidentsCoordinates["longitude"][i] > -98:
+        DictIncidentsPerRegion["SE"] += 1
+
+totalNoIncidents = sum(DictIncidentsPerRegion.values())
+  
+regions = np.array(list(DictIncidentsPerRegion.keys()))
+incidentsPerRegions = np.round(np.array((np.array(list(DictIncidentsPerRegion.values())) / totalNoIncidents) * 100), 2)
+
 ```
 
 ```{r}
