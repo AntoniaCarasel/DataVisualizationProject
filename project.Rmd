@@ -40,6 +40,8 @@ R specific libraries import
 ```{r}
 library(reticulate)
 library(ggplot2)
+library(hrbrthemes)
+library(plotly)
 ```
 
 Python specific libraries import
@@ -402,16 +404,67 @@ for(row in 1 : nrow(matrix)){
 }
 ```
 
-The differences between the states are
+# The differences between the states are - FINISH HERE
 
+### **Chart Type:** Circular BarPlot with one numeric variable
+The purpose of the next section is to identify the number of guns used in all the incidents per state.
+```{python}
+gunsTotalPerState = []
+for i in range (0, len(stateCodesDF)):
+    state = stateCodesDF["State"][i]
+    dfHelper = fullsetDF[fullsetDF["state"]==state]["n_guns_involved"].copy(deep=True)
+    gunsTotalPerState.append(dfHelper.sum().item())
+gunsTotalPerState = np.array(gunsTotalPerState)
+```
 
+```{r}
 
+```
 
+```{r}
+r_gunsTotalPerState <- py$gunsTotalPerState
+```
 
+### **Chart Type:** Heatmap
+The 2 categorical variables that are taken into account for this type of chart are the `IncidentType` and the `States`. We have previously split the incidet type into 7 different categories. We would now like to make an analysis of the causes of gun-violence, i.e. how often each type occurs for the individual states.
+```{python}
+typeTotalPerState = np.empty(shape=(len(incidentType)*len(stateCodesDF)))
+it = 0
+for i in range(0, len(incidentType)):
+    incident = incidentType[i]
 
+    for j in range (0, len(stateCodesDF)):
+        state = stateCodesDF["State"][j]
+        dfHelper = fullsetDF[(fullsetDF["state"]==state) & (fullsetDF[incident] == "YES")][incident].copy(deep=True)
 
+        typeTotalPerState[it] = dfHelper.count()
+        it = it + 1
+```
 
+```{r}
+r_typeTotalPerState <- py$typeTotalPerState
+x <- py$stateCodes
+y <- py$incidentType
+data <- expand.grid(X=x, Y=y)
 
+data$Z <- r_typeTotalPerState
+
+ggplot(data, aes(X, Y, fill=Z)) + 
+ geom_tile() + 
+  scale_fill_distiller(palette = "Greens") + 
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )
+```
+
+### **Chart Type:** Scatter Plot
+```{python}
+
+```
+
+```{r}
+
+```
 
 
 
@@ -440,7 +493,7 @@ We want to see the distribution of people involved in an incident, split by gend
 
 ```
 
-## **Chart Type:** Doughnut Chart
+### **Chart Type:** Doughnut Chart
 We want
 
 Variables: Total number of incidents, total number of incidents per state => procent
@@ -528,11 +581,7 @@ We want to see the level of crime for each state proportional to the size of the
 ```{r}
 
 ```
-### **Chart Type:** Circular BarPlot with one numeric variable
 
-```{r}
-
-```
 
 
 
