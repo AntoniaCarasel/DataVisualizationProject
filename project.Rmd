@@ -78,7 +78,7 @@ def splitDates(datesList):
     months = []
     years = []
     for i in range(0, len(datesList)):
-        value = datesList[1]
+        value = datesList[i]
         splitDate = dt.datetime.strptime(value, "%Y-%m-%d")
         monthName = splitDate.strftime('%b')
         months.append(monthName)
