@@ -51,6 +51,8 @@ library(geojsonio)
 library(geojsonR)
 library(broom)
 library(geojsonsf)
+library(wordcloud2)
+library(RColorBrewer)
 ```
 
 Python specific libraries import
@@ -803,6 +805,36 @@ femaleDistribution = femaleDistribution.groupby([femaleDistribution["state"], fe
 
 ```{r}
 
+```
+### **Chart Type:** WordCloud
+**Variable:** The total number of incidents recorded at each known venue
+```{python}
+column_names = ["word", "freq"]
+
+locationTypeTotal = pd.DataFrame(columns = column_names)
+
+for i in range (0, len(locationType)):
+    array = []
+    location = locationType[i]
+    dfHelper = fullsetDF[fullsetDF["LocationType"]==location]["LocationType"].copy(deep=True)
+    array.append(location)
+    array.append(dfHelper.count())
+
+    locationTypeTotal.loc[-1] = array
+    locationTypeTotal.index = locationTypeTotal.index + 1
+    locationTypeTotal = locationTypeTotal.sort_index()
+```
+
+```{r}
+wordGraph <- function(dataFreq){
+  wordcloud2(data=dataFreq, size=1)
+}
+```
+
+```{r}
+r_location <- py$locationTypeTotal
+
+wordGraph(r_location)
 ```
 
 ### **Chart Type:**
