@@ -97,28 +97,40 @@ def splitDates(datesList):
 allDates = fullsetDF['date']
 splitDates(allDates)
 ```
-# Congressional district? Is this needed? Maybe only if we add a little bit more information
 
-We would like to see if the type of venue has any impact on the number of incidents that occur. However, there are no clearly defined types and as such, we had to define them ourselves and see which fall into the specific category.The location can be mentioned in several fields, so we will use all of them for our search: `location_description`, `incident_characteristics` and `notes`.
-
-A new field was added called "Location Type"
-
-After this classification, the field "location_description" is no longer useful, so it was deleted. - MEH
-
+We would like to see if the type of venue has any impact on the number of incidents that occur. However, there are no clearly defined types and as such, we had to define them ourselves and see which fall into the specific category.The location can be mentioned in several fields, so we will use all of them for our search: `location_description`, `incident_characteristics`, `notes` and `sources`. A new field was added called `LocationType`.
 ```{python}
-locationType = ["Bar/Club", "College", "School", "Apartments", "Park", "Restaurant"]
+locationType = ["Bar/Club", "College", "School", "Apartment", "Park", "Restaurant", "Courthouse", "Tavern", "Theater"]
 locations = fullsetDF["location_description"]
 characteristics = fullsetDF["incident_characteristics"]
 notes = fullsetDF["notes"]
+sources = fullsetDF["sources"]
+fieldNo = fullsetDF.columns.get_loc("location_description")
+
+incidentLocationIdentified = []
+for i in range (0, len(fullsetDF.index)):
+    valueArray = []
+    valueArray.append(locations[i])
+    valueArray.append(characteristics[i])
+    valueArray.append(notes[i])
+    valueArray.append(sources[i])
+    found = ""
+    for j in range(0,4):
+        value = valueArray[j]
+        if type(value) == str:
+            for k in range (0, len(locationType)):
+                if locationType[k].lower() in value.lower():
+                    found = locationType[k]
+                    break
+    if(found == ""):
+        incidentLocationIdentified.append("N/A")
+    else:
+        incidentLocationIdentified.append(found)
+
+fullsetDF.insert(fieldNo, "LocationType", incidentLocationIdentified)
+fullsetDF = fullsetDF.drop("location_description", axis = 1)
+fullsetDF = fullsetDF.drop("notes", axis = 1)
 ```
-# cand luam location we need to ignore ce e in (). I need to take this into account - adauga asta in descriere
-# need to figure out cum sa facem aici cu bar/club ca in characteristics e pus impreuna, in location e doar unul dintre ele - adauga asta in descriere
-# for i in range (0, len(locations)):
-#     value = characteristics[i]
-#     if type(value) == float:
-#         for j in range (0, len(locationType)):
-#           if locationType[j].tolower() in value.tolower():
-# fullsetDF = fullsetDF.drop("location_description", axis = 1)
 
 The field `incident_characteristics` that can be used to find types of incidents. As described previously, we have defined certain categories and searched the text to find in which categories incident fall in.
 
@@ -777,7 +789,23 @@ incidentsForMap = np.array(incidentsPerState.values)
 #     
 # ```
 
-**Chart Type:**
+### **Chart Type:** Scatter Plot
+The next analysis targets the number of females and males involved in incidents for each state.
+```{python}
+maleDistribution = fullsetDF[["state", "YEAR", "MALES"]]
+maleDistribution = maleDistribution.groupby([maleDistribution["state"], maleDistribution["MALES"]], as_index=False).agg({"MALES" : "sum"})
+
+femaleDistribution = fullsetDF[["state", "YEAR", "FEMALES"]]
+femaleDistribution = femaleDistribution.groupby([femaleDistribution["state"], femaleDistribution["FEMALES"]], as_index=False).agg({"FEMALES" : "sum"})
+
+
+```
+
+```{r}
+
+```
+
+### **Chart Type:**
 We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
 ```{r}
 
