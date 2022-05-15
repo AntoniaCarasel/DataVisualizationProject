@@ -71,17 +71,13 @@ fileName = 'state_codes.csv'
 stateCodesDF = pd.read_csv(fileName)
 ```
 # Data Cleaning
-
-# Check if there are any missing values in any other field. If there are, the value will be replaced with "N/A" - do we need to do this tho?
-
-# Remove unnecesary data
-
+## Remove unnecesary data
 Fields "incident_id" and "incident_url_fields_missing", are not need for our analysis so they were removed.
 ```{python}
 fullsetDF = fullsetDF.drop("incident_id", axis = 1)
 fullsetDF = fullsetDF.drop("incident_url_fields_missing", axis = 1)
 ```
-# Processing
+## Processing
 We have split the date into months and years sine this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
 ```{python}
 def splitDates(datesList):
@@ -157,7 +153,7 @@ for i in range(0, len(incidentType)):
     fullsetDF.insert(fieldNo, fieldName, incidentTypeDiscovered)
 ```
 
-Field "participant_gender" offers information for all the people involved. We would like to get the actual number and add these fields to the dataframe.
+Field `participant_gender` offers information for all the people involved. We would like to get the actual number and add these fields to the dataframe.
 ```{python}
 genderParticipants = fullsetDF["participant_gender"]
 female = []
@@ -178,7 +174,7 @@ fullsetDF.insert(fieldNo, "FEMALES", female)
 fullsetDF.insert(fieldNo, "MALES", male)
 ```
 
-We would also like to make the distinction between the number of adults, teenagers and children involved in the incidents and we will use the same process as above on the field "participant_age_group".
+We would also like to make the distinction between the number of adults, teenagers and children involved in the incidents and we will use the same process as above on the field `participant_age_group`.
 ```{python}
 ageParticipants = fullsetDF["participant_age_group"]
 children = []
@@ -203,16 +199,19 @@ fullsetDF.insert(fieldNo, "TEENAGERS", teenagers)
 fullsetDF.insert(fieldNo, "CHILDREN", children)
 ```
 
-# The clean dataframe was saved in a new csv file.
+The clean dataframe was saved in a new csv file.
 ```{python}
 fullsetDF.to_csv("gun-violence_processed-data.csv")
 ```
-# Printing a snapshot of the final dataframe to showcase the data we are now working with.
+Printing a snapshot of the final dataframe to showcase the data we are now working with.
+```{r}
+r_fullsetDF <- py$fullsetDF
 
-
-# Definition of variables
-This section contains all the variables that will be used going further for plotting. Any data selection or processing will be done here.
-
+head(r_fullsetDF)
+```
+# Graphs
+## Initial exploration of the dataset
+### **Chart Type:** Barplot with one numeric variable
 Calculating total numbers of
   * incidents that occured 
   * cases that resulted in killings
@@ -238,9 +237,6 @@ for i in range (0, len(stateCodesDF)):
 stateCodes = stateCodesDF["Code"]
 ```
 
-# Graphs
-## Initial exploration of the dataset
-### **Chart Type:** Barplot with one numeric variable
 We have defined a function for this type of plot and called it for each of the scenarios.
 ```{r}
 initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title, colour){
@@ -265,7 +261,6 @@ initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_ti
 **Variable: Total number of incidents that occured**
 
 We want to see the distribution of the total number of incidents per each state. We will use the `totalPerState` dataframe and the codes from the `stateCodes` array.
-
 ```{r}
 r_totalPerState <- py$totalPerState
 r_labels <- py$stateCodes
@@ -799,7 +794,6 @@ maleDistribution = maleDistribution.groupby([maleDistribution["state"], maleDist
 
 femaleDistribution = fullsetDF[["state", "YEAR", "FEMALES"]]
 femaleDistribution = femaleDistribution.groupby([femaleDistribution["state"], femaleDistribution["FEMALES"]], as_index=False).agg({"FEMALES" : "sum"})
-
 
 ```
 
