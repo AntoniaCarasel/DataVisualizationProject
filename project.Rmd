@@ -9,13 +9,13 @@ date: '2022-05-07'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(warn = - 1)
 ```
 
 # TO KEEP IN MIND - la fiecare grafic: ce vrem sa vedem (scris la inceput), tipul de grafic, datele folosite, interpretare
 
 # We can also add population for each state si sa vedem % incidents raportat la populatie
 
-# Another Data frame for state codes to use for graphs instead of full names
 # Daca avem timp la final, it might be nice sa facem si o predictie. Daca nu facem, sa stergem asta din descrierea initiala
 # We could also do stuff like PCA maybe,care ar fi mai usoare decat predictia
 
@@ -66,8 +66,7 @@ stateCodesDF = pd.read_csv(fileName)
 
 # Remove unnecesary data
 
-# Fields "incident_id" and "incident_url_fields_missing", are not need for our analysis so they were removed.
-
+Fields "incident_id" and "incident_url_fields_missing", are not need for our analysis so they were removed.
 ```{python}
 fullsetDF = fullsetDF.drop("incident_id", axis = 1)
 fullsetDF = fullsetDF.drop("incident_url_fields_missing", axis = 1)
@@ -136,23 +135,6 @@ for i in range(0, len(incidentType)):
     fullsetDF.insert(fieldNo, fieldName, incidentTypeDiscovered)
 ```
 
-The number of guns is not clearly stated. However, we can calculate it based on the number of values in the field "gun_stolen" (if there is no information, the number shown will be 0; it does not signify the absence of a gun but rather lack of sufficient information). A new field is created "No of Guns" which will be positioned right before the "gun_stolen" field.
-```{python}
-allInfoGuns = fullsetDF["gun_stolen"]
-noOfGuns = []
-for i in range (0, len(allInfoGuns)):
-    arrValuesEntry = []
-    value = allInfoGuns[i]
-    if type(value) == float:
-        # We should check here daca chiar e ok sa punem 0 sau ar trebui N/A or something like that. Am putea sa punem 1 because we assume there was at least 1 gun involved, it seems reasonable to make this assumption
-        noOfGuns.append(0)
-    else:
-        arrValuesEntry = value.split('||')
-        noOfGuns.append(len(arrValuesEntry))
-fieldNo = fullsetDF.columns.get_loc("gun_stolen")
-fullsetDF.insert(fieldNo, "NO OF GUNS", noOfGuns)
-```
-
 Field "participant_gender" offers information for all the people involved. We would like to get the actual number and add these fields to the dataframe.
 ```{python}
 genderParticipants = fullsetDF["participant_gender"]
@@ -198,23 +180,8 @@ fullsetDF.insert(fieldNo, "ADULTS", adults)
 fullsetDF.insert(fieldNo, "TEENAGERS", teenagers)
 fullsetDF.insert(fieldNo, "CHILDREN", children)
 ```
-# latitude and logitude - is this really helpful?
-
-# Renaming the fields. This step was necessary since we aim to use the exact names for plotting and they should be representative and without any additional characters such as "_".
-This is completely useless. Nu ma incanta cu ABSOLUT nimic, mai tare ma incurca to be honest
-fullsetDF = fullsetDF.rename(columns={
-     "date":"DATE",
-     "state":"STATE",
-     "n_killed":"NO PEOPLE KILLED",
-     "n_injured":"NO PEOPLE INJURED",
-     "gun_stolen":"STOLEN GUN",
-})
-
-# De terminat aici
-#city_or_county	address	n_killed	n_injured	incident_url	source_url	incident_url_fields_missing	congressional_district	gun_stolen	gun_type	incident_characteristics	latitude	location_description	longitude	n_guns_involved	notes	participant_age	participant_age_group	participant_gender	participant_name	participant_relationship	participant_status	participant_type	sources	state_house_district	state_senate_district
 
 # The clean dataframe was saved in a new csv file.
-
 ```{python}
 fullsetDF.to_csv("gun-violence_processed-data.csv")
 ```
@@ -408,7 +375,7 @@ for(row in 1 : nrow(matrix)){
 # The differences between the states are - FINISH HERE
 
 ### **Chart Type:** Circular BarPlot with one numeric variable
-The purpose of the next section is to identify the number of guns used in all the incidents per state.
+The purpose of the next section is to identify the number of guns used in all the incidents per state. We have noticed that there are several incidents with at least 3 guns involved.
 ```{python}
 gunsTotalPerState = []
 for i in range (0, len(stateCodesDF)):
@@ -419,13 +386,36 @@ gunsTotalPerState = np.array(gunsTotalPerState)
 ```
 
 ```{r}
+circular_barplot <- function(all_labels, all_values, x_name, y_name, plot_title, colour){
+  
+  data=data.frame(name = all_labels, value = all_values)
 
+  totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = colour) + 
+    xlab(x_name) + 
+    ylab(y_name) +
+    ggtitle(plot_title)+
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "white")
+  ) +
+  coord_polar(start = 0)
+  
+  options(repr.plot.width = 40, repr.plot.height = 40)
+  totalIncidentsBarPlot
+}
 ```
 
 ```{r}
 r_gunsTotalPerState <- py$gunsTotalPerState
+
+circular_barplot(r_labels, r_gunsTotalPerState, "State Code", "Number of guns", "Distribution of no of guns involved per State", "#091CC1")
 ```
 
+We can clearly see that there are several states where the number of guns is a lot higher, specifically California, Florida, Texas and Illinois.
+
+As we remember from the initial plots, these are the exact states that had the highest number of incidents as well.
 ### **Chart Type:** Heatmap
 The 2 categorical variables that are taken into account for this type of chart are the `IncidentType` and the `States`. We have previously split the incidet type into 7 different categories. We would now like to make an analysis of the causes of gun-violence, i.e. how often each type occurs for the individual states.
 ```{python}
@@ -458,40 +448,115 @@ ggplot(data, aes(X, Y, fill=Z)) +
   )
 ```
 
-### **Chart Type:** Scatter Plot
+
+### **Chart Type:** Trending Animated Bar Chart
+We first calculate the number of people injured or killed (respectively) for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
 ```{python}
+statesAll = stateCodes = stateCodesDF["State"]
+def insertRow(row_number, df, row_value):
+    start_upper = 0
+    end_upper = row_number
+    start_lower = row_number
+    end_lower = df.shape[0]
+    upper_half = [*range(start_upper, end_upper, 1)]
+    lower_half = [*range(start_lower, end_lower, 1)]
+    lower_half = [x.__add__(1) for x in lower_half]
+    index_ = upper_half + lower_half
+    df.index = index_
+    df.loc[row_number] = row_value
 
+peopleKilledByStateandDate = fullsetDF[["state", "YEAR", "n_killed"]]
+peopleKilledByStateandDate = peopleKilledByStateandDate.groupby([peopleKilledByStateandDate["state"], peopleKilledByStateandDate["YEAR"]], as_index=False).agg({"n_killed" : "sum"})
+peopleKilledByStateandDate.rename(columns = {'n_killed':'var'}, inplace = True)
+
+def dataCleaning(dataframe):
+  allYears = [2013, 2014, 2015, 2016, 2017, 2018]
+  for i in range(0, len(statesAll)):
+      for j in range(i*6, i*6+6):
+          year = allYears[j - i*6]
+          if (dataframe.iloc[j]["YEAR"] != year):
+              insertValue = [statesAll[i], year, 0]
+              insertRow(j, dataframe, insertValue)
+              dataframe = dataframe.sort_index(axis=0)
+              j = j-1
+
+dataCleaning(peopleKilledByStateandDate)
 ```
 
 ```{r}
+library(tidyverse)
+library(gganimate)
+library(gifski)
 
+rankingPlot <- function(data, plot_title){
+
+  totalIncidentsRankingBarChart <- ggplot(data, aes(rank, group = state, fill = as.factor(state), color = as.factor(state))) + 
+    geom_tile(aes(y = var/2, height = var, width = 0.9), alpha = 0.8, color = NA) +
+    geom_text(aes(y = 0, label = paste(state, " ")), vjust = 0.2, hjust = 1, size = 6) +
+    geom_text(aes(y = var, label = n_lbl, hjust = 0), size = 6) +
+    coord_flip(clip = "off", expand = FALSE) +
+    scale_y_continuous(labels = scales::comma) +
+    scale_x_reverse() +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "white"),
+      axis.text.x = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      plot.title = element_text(size = 25),
+      legend.position = "none",
+      plot.margin = margin(4, 4, 4, 4, "cm")
+  )
+  anim <- totalIncidentsRankingBarChart + 
+    transition_states(YEAR, transition_length = 5, state_length = 5) +
+    view_follow(fixed_x = TRUE) +
+    labs(title = plot_title)
+    
+  
+  animate(anim, 200, fps = 20,  width = 1200, height = 1000, 
+        renderer = gifski_renderer("gganim.gif"))
+}
+```
+
+```{r}
+r_totalPerState <- py$peopleKilledByStateandDate
+
+dataPrep <- function(dataframe){
+  dataframe <- dataframe %>%
+  group_by(YEAR) %>%
+  mutate(rank = rank(-var),
+         n_rel = var/var[rank==1],
+         n_lbl = paste0(round(var, 2))) %>%
+  group_by(state) %>%
+  filter(rank <=10) %>%
+  ungroup()
+}
+
+r_totalPerState <- dataPrep(r_totalPerState)
+
+rankingPlot(r_totalPerState, 'Ranking of total number of deaths per year: {closest_state}')
 ```
 
 
+The same process described above was followed for the number of injuries.
+```{python}
+peopleInjuredByStateandDate = fullsetDF[["state", "MONTH", "YEAR", "n_injured"]]
+peopleInjuredByStateandDate = peopleInjuredByStateandDate.groupby([peopleInjuredByStateandDate["state"], peopleInjuredByStateandDate["YEAR"]], as_index=False).agg({"n_injured" : "sum"})
 
+peopleInjuredByStateandDate.rename(columns = {'n_injured':'var'}, inplace = True)
 
+dataCleaning(peopleInjuredByStateandDate)
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### **Chart Type:** Histogram with two numeric variables
-We want to see the distribution of people involved in an incident, split by gender. We will use two Y axis and ...dataframes.
 ```{r}
+r_totalPerState <- py$peopleInjuredByStateandDate
 
+r_totalPerState <- dataPrep(r_totalPerState)
+
+rankingPlot(r_totalPerState, 'Ranking of total number of injuries per year: {closest_state}')
 ```
 
 ### **Chart Type:** Doughnut Chart
@@ -577,12 +642,8 @@ r_incidentsPerRegion <- py$incidentsPerRegions
 donut_plot_labels(r_regions, r_incidentsPerRegion)
 ```
 
-
-
-
 ### **Chart Type:** Lollipop chart with one numeric variable
-In this section we show you the top 25 and the buttom 25 news websites that report crimes. In this way we could decide which online newspaper is the most and the least trustful.
-
+In this section we want to highlight the top 25 and the bottom 25 news websites that reported crimes, which would help decide which online newspaper are the most and least trustworthy.
 ```{python}
 sourcesPerIncident = fullsetDF[["date", "sources"]]
 
@@ -642,7 +703,7 @@ lollipop_function <- function(sources, appearances, title) {
         plot.title = element_text(size = 12)
       ) +
       xlab("") +
-      ylab("Number of incidents reported along the whole period")
+      ylab("Number of incidents reported for the whole period")
     
     ggplotly(p)
 }
@@ -652,14 +713,14 @@ lollipop_function <- function(sources, appearances, title) {
 r_source <- py$sourcesName
 r_news <- py$sourceNews
 
-lollipop_function(r_source, r_news, "The most trustful online newspepers that report gun-violence incidents")
+lollipop_function(r_source, r_news, "The most trustworthy websites that reported gun-violence incidents")
 ```
 
 ```{r}
 r_source <- py$sourcesLeastTrustful
 r_news <- py$appearancesLeastTrusful
 
-lollipop_function(r_source, r_news, "The least trustful online newspepers that report gun-violence incidents")
+lollipop_function(r_source, r_news, "The least trustworthy websites that reported gun-violence incidents")
 ```
 
 ### **Chart Type:** Choropleth charts
@@ -673,54 +734,52 @@ incidentsForMap = np.array(incidentsPerState.values)
 
 ```
 
-```{r}
-library(geojsonio)
-library(geojsonR)
-library(broom)
-library(geojsonsf)
+# ```{r}
+# library(geojsonio)
+# library(geojsonR)
+# library(broom)
+# library(geojsonsf)
+# 
+# file <- system.file("examples", "us_states.json", package = "geojsonio")
+# spdf <- geojson_read(file, what = "sp")
+# 
+# spdf_fortified <- tidy(spdf, region = "id")
+# 
+# r_states <- py$statesForMap
+# r_incidents <- py$incidentsForMap
+# 
+# numericData <- data.frame(id = r_states, incidents = r_incidents)
+# 
+# spdf_fortified <- merge(spdf_fortified, numericData, by="id")
+# ```
 
-file <- system.file("examples", "us_states.json", package = "geojsonio")
-spdf <- geojson_read(file, what = "sp")
-
-spdf_fortified <- tidy(spdf, region = "id")
-
-r_states <- py$statesForMap
-r_incidents <- py$incidentsForMap
-
-numericData <- data.frame(id = r_states, incidents = r_incidents)
-
-spdf_fortified <- merge(spdf_fortified, numericData, by="id")
-```
-
-
-```{r}
-library(viridis)
-
-ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
-    geom_polygon(aes(fill = incidents), color = "black", size = 0.1) + 
-    coord_map() +
-    labs(
-      title = "US states map",
-      subtitle = "Number of gun-violence incidents per state"
-    ) +
-    scale_fill_gradient(high = "#e34a33", low = "#fee8c8", guide = "colorbar") +
-    theme(
-      text = element_text(color = "#22211d"),
-      plot.background = element_rect(fill = "#f5f5f2", color = NA),
-      panel.background = element_rect(fill = "#f5f5f2", color = NA),
-      legend.background = element_rect(fill = "#f5f5f2", color = NA),
-  
-      plot.title = element_text(size= 14, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
-      plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
-      plot.caption = element_text( size=12, color = "#4e4d47", margin = margin(b = 0.3, r=-99, unit = "cm") ),
-  
-      legend.position = c(0.9, 0.2)
-    ) +
-    xlim(c(-130, -65)) +
-    ylim(c(20, 50))
-    
-```
-
+# ```{r}
+# library(viridis)
+# 
+# ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
+#     geom_polygon(aes(fill = incidents), color = "black", size = 0.1) + 
+#     coord_map() +
+#     labs(
+#       title = "US states map",
+#       subtitle = "Number of gun-violence incidents per state"
+#     ) +
+#     scale_fill_gradient(high = "#e34a33", low = "#fee8c8", guide = "colorbar") +
+#     theme(
+#       text = element_text(color = "#22211d"),
+#       plot.background = element_rect(fill = "#f5f5f2", color = NA),
+#       panel.background = element_rect(fill = "#f5f5f2", color = NA),
+#       legend.background = element_rect(fill = "#f5f5f2", color = NA),
+#   
+#       plot.title = element_text(size= 14, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+#       plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
+#       plot.caption = element_text( size=12, color = "#4e4d47", margin = margin(b = 0.3, r=-99, unit = "cm") ),
+#   
+#       legend.position = c(0.9, 0.2)
+#     ) +
+#     xlim(c(-130, -65)) +
+#     ylim(c(20, 50))
+#     
+# ```
 
 **Chart Type:**
 We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
