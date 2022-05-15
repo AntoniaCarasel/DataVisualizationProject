@@ -182,8 +182,7 @@ ggplot(data, aes(x=r_n_people, y=r_n_killed, color=r_mass_shooting)) +
   labs(title = "Number of people involved VS number of people killed for the same incident",
        x = "People involved",
        y = "People killed",
-       color = "Mass Shooting",
-       caption = "Source: Gapminder") +
+       color = "Mass Shooting") +
   theme(axis.title = element_text(),
         legend.text = element_text(size = 6)) +
   scale_color_brewer(palette = "Set2") +
