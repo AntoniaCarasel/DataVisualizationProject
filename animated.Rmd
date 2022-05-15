@@ -20,14 +20,14 @@ fullsetDF = pd.read_csv(fileName)
 
 
 ```{python}
-peopleAggregatedByDate = fullsetDF[["date", "MONTH", "YEAR", "n_killed", "n_injured", "NO OF GUNS"]]
+peopleAggregatedByDate = fullsetDF[["date", "MONTH", "YEAR", "n_killed", "n_injured", "n_guns_involved"]]
 
 peopleAggregatedByDate = peopleAggregatedByDate.groupby([peopleAggregatedByDate["YEAR"], peopleAggregatedByDate["MONTH"] ], as_index=False)\
-    .agg({"n_killed" : "sum", "n_injured" : "sum", "NO OF GUNS" : "sum", "date": np.max}).sort_values("date", ascending=True)
+    .agg({"n_killed" : "sum", "n_injured" : "sum", "n_guns_involved" : "sum", "date": np.max}).sort_values("date", ascending=True)
 
 timeSeriesKilled = peopleAggregatedByDate[["date", "n_killed"]]
 timeSeriesInjured = peopleAggregatedByDate[["date", "n_injured"]]
-timeSeriesGuns = peopleAggregatedByDate[["date", "NO OF GUNS"]]
+timeSeriesGuns = peopleAggregatedByDate[["date", "n_guns_involved"]]
 
 n_killed = ["n_killed"] * len(timeSeriesKilled)
 n_injured = ["n_injured"] * len(timeSeriesInjured)
@@ -50,7 +50,7 @@ timeSeriesInjured["index"] = timeSeriesInjured.index
 timeSeriesGuns = pd.DataFrame({
     "date": timeSeriesGuns["date"].to_numpy(),
     "variable": n_guns,
-    "value": timeSeriesGuns["NO OF GUNS"].to_numpy()
+    "value": timeSeriesGuns["n_guns_involved"].to_numpy()
 })
 timeSeriesGuns["index"] = timeSeriesGuns.index
 
