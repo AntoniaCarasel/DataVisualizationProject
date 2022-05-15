@@ -668,13 +668,11 @@ lollipop_function(r_source, r_news, "The least trustful online newspepers that r
 ```{python}
 incidentsPerState = fullsetDF["state"].value_counts(ascending=False)
 
-print(np.array(incidentsPerState.index))
-print(np.array(incidentsPerState.values))
-
 statesForMap = np.array(incidentsPerState.index)
 incidentsForMap = np.array(incidentsPerState.values)
 
 ```
+
 ```{r}
 library(geojsonio)
 library(geojsonR)
@@ -692,17 +690,11 @@ r_incidents <- py$incidentsForMap
 numericData <- data.frame(id = r_states, incidents = r_incidents)
 
 spdf_fortified <- merge(spdf_fortified, numericData, by="id")
-spdf_fortified
 ```
 
 
 ```{r}
 library(viridis)
-
-spdf_fortified <- data.frame(
-  id = spdf_fortified$id, long = spdf_fortified$long, lat = spdf_fortified$lat, order = spdf_fortified$order, 
-  hole = spdf_fortified$hole, piece = spdf_fortified$piece, group = spdf_fortified$group, incidents = spdf_fortified$incidents
-)
 
 ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
     geom_polygon(aes(fill = incidents), color = "black", size = 0.1) + 
