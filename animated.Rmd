@@ -67,8 +67,8 @@ filteredDataGunsAfterFirstYear = timeSeriesGuns[pd.to_datetime(timeSeriesGuns["d
 ```
 
 ```{r}
-r_date = py$timeSeriesInjured["date"]
-r_value = py$timeSeriesInjured["value"]
+r_date = py$filteredDataAfterFirstYear["date"]
+r_value = py$filteredDataAfterFirstYear["value"]
 data = data.frame(date = r_date, value = r_value)
 
 data$date <- as.POSIXct(data$date, format = "%Y-%m-%d")
@@ -142,6 +142,8 @@ ggplot(data, aes(x = x, y = y, group = variable, color = color)) +
 
 
 ```
+
+
 ```{python}
 fileName = 'gun-violence_processed-data.csv'
 fullsetDF = pd.read_csv(fileName)

@@ -38,6 +38,7 @@ The data source for the project is Kaggle.
 # Settings
 R specific libraries import
 ```{r}
+library(hrbrthemes)
 library(reticulate)
 library(ggplot2)
 library(hrbrthemes)
@@ -575,6 +576,94 @@ r_incidentsPerRegion <- py$incidentsPerRegions
 
 donut_plot_labels(r_regions, r_incidentsPerRegion)
 ```
+
+
+
+
+### **Chart Type:** Lollipop chart with one numeric variable
+In this section we show you the top 25 and the buttom 25 news websites that report crimes. In this way we could decide which online newspaper is the most and the least trustful.
+
+```{python}
+sourcesPerIncident = fullsetDF[["date", "sources"]]
+
+DictSourcesAndIncidents = {"pittsburgh.cbslocal.com" : 0}
+for i in range (0, len(sourcesPerIncident["sources"])):
+    try:
+        sourcesArray = sourcesPerIncident["sources"][i].split("||")
+    except:
+        continue
+    for source in sourcesArray:
+        URI = source.strip().partition("//")[2]
+        URL = URI.partition("/")[0]
+        if URL in DictSourcesAndIncidents:
+            DictSourcesAndIncidents[URL] += 1
+        else:
+            DictSourcesAndIncidents[URL] = 0
+
+lessIncidentsPerSource = dict(filter(lambda elem: elem[1] != 0, DictSourcesAndIncidents.items()))
+
+sort_by_value = lambda DictSourcesAndIncidents: DictSourcesAndIncidents[1]
+sortedSourcesDict = sorted(DictSourcesAndIncidents.items(), key = sort_by_value, reverse=True)
+
+sourcesName = []
+sourceNews = []
+for x in list(sortedSourcesDict)[0:25]:
+    sourcesName.append(x[0])
+    sourceNews.append(x[1])
+    
+sortedSourcesLeastTrustful = sorted(lessIncidentsPerSource.items(), key = sort_by_value)
+
+sourcesLeastTrustful = []
+appearancesLeastTrusful = []
+for x in list(sortedSourcesLeastTrustful)[0:25]:
+    sourcesLeastTrustful.append(x[0])
+    appearancesLeastTrusful.append(x[1])
+```
+
+
+```{r}
+library(plotly)
+
+lollipop_function <- function(sources, appearances, title) {
+    
+    data <- data.frame(x = sources, y = appearances)
+    
+    p <- ggplot(data, aes(x=x, y=y)) +
+      geom_segment( aes(x=reorder(x, y), xend=x, y=0, yend=y), color="grey") +
+      geom_point( color="orange", size=4, fill=alpha("orange", 0.3), alpha=0.7, shape=21, stroke=2) +
+      theme_light() +
+      coord_flip() +
+      ggtitle(title) +
+      scale_size(range=c(2,12), guide="none") +
+      theme(
+        panel.grid.major.x = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks.x = element_blank(),
+        plot.title = element_text(size = 12)
+      ) +
+      xlab("") +
+      ylab("Number of incidents reported along the whole period")
+    
+    ggplotly(p)
+}
+```
+
+```{r}
+r_source <- py$sourcesName
+r_news <- py$sourceNews
+
+lollipop_function(r_source, r_news, "The most trustful online newspeper that report gun-violence incidents")
+```
+
+```{r}
+r_source <- py$sourcesLeastTrustful
+r_news <- py$appearancesLeastTrusful
+
+lollipop_function(r_source, r_news, "The least trustful online newspeper that report gun-violence incidents")
+```
+
+
+
 
 **Chart Type:**
 We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
