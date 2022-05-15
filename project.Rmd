@@ -43,6 +43,14 @@ library(reticulate)
 library(ggplot2)
 library(hrbrthemes)
 library(plotly)
+library(tidyverse)
+library(gganimate)
+library(gifski)
+library(viridis)
+library(geojsonio)
+library(geojsonR)
+library(broom)
+library(geojsonsf)
 ```
 
 Python specific libraries import
@@ -219,7 +227,6 @@ stateCodes = stateCodesDF["Code"]
 # Graphs
 ## Initial exploration of the dataset
 ### **Chart Type:** Barplot with one numeric variable
-
 We have defined a function for this type of plot and called it for each of the scenarios.
 ```{r}
 initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title, colour){
@@ -229,9 +236,7 @@ initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_ti
   totalIncidentsBarPlot <- ggplot(data, aes(x=name, y = value)) + geom_bar(stat = "identity", width=0.7, fill = colour) + 
     xlab(x_name) + 
     ylab(y_name) +
-    ggtitle(plot_title)
-
-  totalIncidentsBarPlot +
+    ggtitle(plot_title) +
     theme(
       plot.title = element_text(hjust = 0.5),
       panel.grid.major = element_blank(),
@@ -239,6 +244,7 @@ initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_ti
       panel.background = element_rect(fill = "white"), 
       axis.text.x = element_text(angle = 90, vjust = 0.5)
   )
+  ggplotly(totalIncidentsBarPlot)
 }
 ```
 
@@ -484,10 +490,6 @@ dataCleaning(peopleKilledByStateandDate)
 ```
 
 ```{r}
-library(tidyverse)
-library(gganimate)
-library(gifski)
-
 rankingPlot <- function(data, plot_title){
 
   totalIncidentsRankingBarChart <- ggplot(data, aes(rank, group = state, fill = as.factor(state), color = as.factor(state))) + 
@@ -735,11 +737,6 @@ incidentsForMap = np.array(incidentsPerState.values)
 ```
 
 # ```{r}
-# library(geojsonio)
-# library(geojsonR)
-# library(broom)
-# library(geojsonsf)
-# 
 # file <- system.file("examples", "us_states.json", package = "geojsonio")
 # spdf <- geojson_read(file, what = "sp")
 # 
@@ -754,7 +751,6 @@ incidentsForMap = np.array(incidentsPerState.values)
 # ```
 
 # ```{r}
-# library(viridis)
 # 
 # ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
 #     geom_polygon(aes(fill = incidents), color = "black", size = 0.1) + 
