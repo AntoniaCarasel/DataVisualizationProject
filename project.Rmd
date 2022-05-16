@@ -14,8 +14,6 @@ options(warn = - 1)
 
 # TO KEEP IN MIND - la fiecare grafic: ce vrem sa vedem (scris la inceput), tipul de grafic, datele folosite, interpretare
 
-# We can also add population for each state si sa vedem % incidents raportat la populatie
-
 # Daca avem timp la final, it might be nice sa facem si o predictie. Daca nu facem, sa stergem asta din descrierea initiala
 # We could also do stuff like PCA maybe,care ar fi mai usoare decat predictia
 
@@ -838,6 +836,8 @@ simpleScatter(r_data)
 ```
 
 ### **Chart Type:** WordCloud
+We do have a lot of unknown locations, however, just to give an idea of where most incidents occurred, we have plotted a Word Chart as seen below.
+
 **Variable:** The total number of incidents recorded at each known venue
 ```{python}
 column_names = ["word", "freq"]
@@ -868,6 +868,7 @@ r_location <- py$locationTypeTotal
 wordGraph(r_location)
 ```
 
+As one would expect, the places with the highest rate of gun-violence are parks, apartments(i.e. at home), schools or bars.
 ### **Chart Type:**
 We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
 ```{r}
