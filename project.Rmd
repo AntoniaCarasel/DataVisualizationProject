@@ -203,12 +203,7 @@ The clean dataframe was saved in a new csv file.
 ```{python}
 fullsetDF.to_csv("gun-violence_processed-data.csv")
 ```
-Printing a snapshot of the final dataframe to showcase the data we are now working with.
-```{r}
-r_fullsetDF <- py$fullsetDF
 
-head(r_fullsetDF)
-```
 # Graphs
 ## Initial exploration of the dataset
 ### **Chart Type:** Barplot with one numeric variable
@@ -302,9 +297,37 @@ main = "Outlier variables - States that have higher criminality",
 names = c("Number of incidents", "Number of killings", "Number of injuries"),
 col = c("#091CC1","#652194", "#134611")
 )
-p
+
+outliers <- p$out
 ```
 
+```{python}
+outliers = r.outliers
+actualStates = []
+
+for i in range(0,4):
+  for j in range (0, len(stateCodes)):
+    if(totalPerState[j] == outliers[i]):
+      actualStates.append(stateCodes[j])
+      break
+
+for i in range(4,6):
+  for j in range (0, len(stateCodes)):
+    if(totalKillingsPerState[j] == outliers[i]):
+      actualStates.append(stateCodes[j])
+      break
+
+for i in range(6,7):
+  for j in range (0, len(stateCodes)):
+    if(totalInjuriesPerState[j] == outliers[i]):
+      actualStates.append(stateCodes[j])
+      break
+
+actualStates = list(dict.fromkeys(actualStates))
+outlierList = []
+for i in range(0, len(actualStates)):
+  outlierList.append(stateCodesDF[stateCodesDF["Code"] == actualStates[i]]["State"].item())
+```
 ### **Chart Type:** Doughnut Plot
 We have decided to further investigate the outlier states so as to better understand the factors that led to an increased number of incidents involving firearms.
 
@@ -312,7 +335,7 @@ The first type of analysis targets the age categories. For this purpose, the dat
 
 Calculating the percentage of Child, Teenager and Adult participants for each state.
 ```{python}
-outlierList = np.array(["Pennsylvania", "California", "Colorado"])
+outlierList = np.array(outlierList)
 totalsStates = np.zeros(shape=(len(outlierList),3), dtype = float)
 categories = np.array(["CHILDREN", "TEENAGERS", "ADULTS"])
 
@@ -337,7 +360,7 @@ for i in range(0, len(outlierList)):
 ```
 
 ```{r}
-donut_plot_labels <- function(all_labels, all_values) {
+donut_plot_labels <- function(all_labels, all_values, title) {
   
 data = data.frame(name = all_labels, value = all_values)
 
@@ -345,25 +368,31 @@ data$ymax = cumsum(all_values)
 data$ymin = c(0, head(data$ymax, n=-1))
 
 data$labelPosition <- (data$ymax + data$ymin) / 2
-data$label <- paste0(data$name, ": ", data$value, "%")
+data$label <- paste0(data$value, "%")
 
 ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
   geom_rect() +
-  geom_text( x=2, aes(y=labelPosition, label=label, color=name), size=3) +
+  geom_text(x=2, aes(y=labelPosition, label=label, color=name), size=3) +
   scale_fill_brewer(palette = "Dark2") +
   scale_color_brewer(palette = "Dark2") +
   coord_polar(theta="y") +
-  xlim(c(-1, 4))
+  xlim(c(-1, 4)) +
+  ggtitle(title) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank())
 }
 ```
-
+  
 **Variables: Percentage of each age group involved in an incident per state and across the states.**
 ```{r}
 r_categories <- py$categories
+r_outlierList <- py$outlierList
+
 matrix <- py$totalsStates
 for(row in 1 : nrow(matrix)){
   r_totalsStates<- matrix[row,]
-  print(donut_plot_labels(r_categories, r_totalsStates))
+  print(donut_plot_labels(r_categories, r_totalsStates, r_outlierList[row]))
 }
 ```
 
@@ -378,16 +407,14 @@ totalsStates = totalsStates.transpose()
 ```
 
 ```{r}
-r_outlierList <- py$outlierList
-
 matrix <- py$totalsStates
 for(row in 1 : nrow(matrix)){
   r_totalsStates<- matrix[row,]
-  print(donut_plot_labels(r_outlierList, r_totalsStates))
+  print(donut_plot_labels(r_outlierList, r_totalsStates, r_categories[row]))
 }
 ```
 
-# The differences between the states are - FINISH HERE
+The differences between the states are generally not that significant, the percentages for each age group are somewhere around 25-40%. However, we notice one glaring exception for the state of Texas which has the highest percentage of children involved in gun-violence incidents (around 60%).
 
 ### **Chart Type:** Circular BarPlot with one numeric variable
 The purpose of the next section is to identify the number of guns used in all the incidents per state. We have noticed that there are several incidents with at least 3 guns involved.
@@ -467,7 +494,7 @@ ggplot(data, aes(X, Y, fill=Z)) +
 ### **Chart Type:** Trending Animated Bar Chart
 We first calculate the number of people injured or killed (respectively) for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
 ```{python}
-statesAll = stateCodes = stateCodesDF["State"]
+statesAll = stateCodesDF["State"]
 def insertRow(row_number, df, row_value):
     start_upper = 0
     end_upper = row_number
@@ -650,7 +677,7 @@ incidentsPerRegions = np.round(np.array((np.array(list(DictIncidentsPerRegion.va
 r_regions <- py$regions
 r_incidentsPerRegion <- py$incidentsPerRegions
 
-donut_plot_labels(r_regions, r_incidentsPerRegion)
+donut_plot_labels(r_regions, r_incidentsPerRegion, "Incidents per region")
 ```
 
 ### **Chart Type:** Lollipop chart with one numeric variable
@@ -789,17 +816,27 @@ incidentsForMap = np.array(incidentsPerState.values)
 ### **Chart Type:** Scatter Plot
 The next analysis targets the number of females and males involved in incidents for each state.
 ```{python}
-maleDistribution = fullsetDF[["state", "YEAR", "MALES"]]
-maleDistribution = maleDistribution.groupby([maleDistribution["state"], maleDistribution["MALES"]], as_index=False).agg({"MALES" : "sum"})
+malefemaleDistribution = fullsetDF[["state", "FEMALES", "MALES"]]
+malefemaleDistribution = malefemaleDistribution.groupby([malefemaleDistribution["state"]], as_index=False).agg({"FEMALES" : "sum", "MALES" : "sum"})
+malefemaleDistribution = malefemaleDistribution[["FEMALES", "MALES"]]
 
-femaleDistribution = fullsetDF[["state", "YEAR", "FEMALES"]]
-femaleDistribution = femaleDistribution.groupby([femaleDistribution["state"], femaleDistribution["FEMALES"]], as_index=False).agg({"FEMALES" : "sum"})
-
+malefemaleDistribution.index = statesAll
 ```
 
 ```{r}
-
+simpleScatter <- function(data){
+  ggplot(data, aes(x=FEMALES, y=MALES)) + 
+    geom_point() +
+    geom_text(label=rownames(data), check_overlap = T)
+}
 ```
+
+```{r}
+r_data <- py$malefemaleDistribution
+
+simpleScatter(r_data)
+```
+
 ### **Chart Type:** WordCloud
 **Variable:** The total number of incidents recorded at each known venue
 ```{python}

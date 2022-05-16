@@ -81,6 +81,7 @@ ggplot(data, aes(x=date, y=value)) +
     axis.text.x = element_text(angle = 90)
   )
 ```
+
 ```{r}
 r_date = py$filteredDataInjuredAfterFirstYear["date"]
 r_value = py$filteredDataInjuredAfterFirstYear["value"]
@@ -96,6 +97,7 @@ ggplot(data, aes(x=date, y=value)) +
     axis.text.x = element_text(angle = 90)
   )
 ```
+
 ```{r}
 r_date = py$filteredDataGunsAfterFirstYear["date"]
 r_value = py$filteredDataGunsAfterFirstYear["value"]
