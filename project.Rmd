@@ -263,12 +263,14 @@ initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of inciden
 
 The general level of incidents can roughly be found somewhere in the interval [0,5000], but we do see some outliers - states have a significantly higher number of gun-involved cases.
 
-**Variable: Total number of cases that resulted in killings**
+**Variable: Total number of cases that resulted in deaths**
 ```{r}
 r_totalKillingsPerState <- py$totalKillingsPerState
 
 initial_eda_barplots(r_labels, r_totalKillingsPerState, "State Code", "Number of killings", "Distribution of cases that resulted in killings per State", "#652194")
 ```
+
+The number of deaths for most states lies between 0 and 3000, with the overwhelming majority being between 0 and 2000. Outlier values go up to 5000
 
 **Variable: Total number of cases that resulted in injuries**
 ```{r}
@@ -277,11 +279,9 @@ r_totalInjuriesPerState <- py$totalInjuriesPerState
 initial_eda_barplots(r_labels, r_totalInjuriesPerState, "State Code", "Number of injuries", "Distribution of cases that resulted in injuries per State", "#134611")
 ```
 
+Number of injuries per state is between 0 and 6000 for all states but one - that exception being over 9000
+
 Outlier values can be noticed in the last two charts as well. Given this observation, it would make sense to realize another chart - a Boxplot - that would specifically highlight this information. Even though boxplots can sometimes be missleading because of the loss of information, our purpose for this scenario is to identify those states that do not fall into the IQR (Interquantile Range), purpose which makes this type of chart appropiate.
-
-```{python}
-
-```
 
 ### **Chart Type:** Boxplot with three series
 **Variables: Total number of incidents, firearm deaths and injuries, respectively**
@@ -299,6 +299,9 @@ col = c("#091CC1","#652194", "#134611")
 outliers <- p$out
 ```
 
+From the boxplots, the distribution for all 3 of them (number of incidents, killings and injuries) is skewed towards lower values, with the median finding itself closer to the bottom of the chart. The outlier values can also be clearly seen, being outside the range of the whiskers of the box plots
+
+*Extracting the outlier values from the boxplot representation:*
 ```{python}
 outliers = r.outliers
 actualStates = []
@@ -871,11 +874,10 @@ wordGraph(r_location)
 As one would expect, the places with the highest rate of gun-violence are parks, apartments(i.e. at home), schools or bars.
 ### **Chart Type:**
 We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
+
 ```{r}
 
 ```
-
-
 
 
 # Overall Conclusions
