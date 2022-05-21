@@ -609,7 +609,7 @@ We want
 Variables: Total number of incidents, total number of incidents per state => procent
 
 Calculating total number of incidents per state and adding them into a dictionary.
-The states with incident percentages less than 1% will be categorized as others.
+The states with incident percentages less than 1% will be categorized as 'others'.
 ```{python}
 totalPerState = []
 incidentsStatesArray = np.array(fullsetDF['state'].to_numpy())
@@ -643,7 +643,17 @@ data$ymin = c(0, head(data$ymax, n=-1))
 ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) + 
   geom_rect() +
   coord_polar(theta="y") +
-  xlim(c(2, 4))
+  xlim(c(2, 4)) +
+  scale_size(range=c(2,12), guide="none") +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.border = element_blank(),
+    axis.ticks.x = element_blank(),
+    plot.title = element_text(size = 12)
+  ) +
+  xlab("") +
+  ylab("Number of incidents reported per each state")
+
 }
 ```
 
@@ -654,9 +664,13 @@ r_percentagesPerState <- py$valuesForDonut
 donut_plot(r_labels, r_percentagesPerState)
 ```
 
-Calculating the number of incidents per region: NE, NW, SW, SE.
+## Per region:
+Calculating the number of incidents per geographical region: North-East (NE), North-West(NW), South-West(SW), South-East(SE).
 
-We consider the center position the geographic center of the United States. This is a point approximately 32 km north of Belle Fourche, South Dakota at LAT. 39°50' LONG. −98°35'
+We consider the center position the geographic center of the United States. This is a point approximately 32 km north of Belle Fourche, South Dakota at 'LAT. 39°50' LONG. −98°35'.
+
+Variables: latitude, longitude
+
 ```{python}
 DictIncidentsPerRegion = {"NE": 0, "NW": 0, "SW": 0, "SE": 0}
 
@@ -683,11 +697,18 @@ incidentsPerRegions = np.round(np.array((np.array(list(DictIncidentsPerRegion.va
 r_regions <- py$regions
 r_incidentsPerRegion <- py$incidentsPerRegions
 
-donut_plot_labels(r_regions, r_incidentsPerRegion, "Incidents per region")
+donut_plot_labels(r_regions, r_incidentsPerRegion, "Incidents per region in %")
 ```
+Observations: Most of the gun-involved crimes are hapenning in the East side of America with almost 83% of the total number. 
+Comparing the north of the country with the south side, more incidents happened in the last one mentioned. 
+
 
 ### **Chart Type:** Lollipop chart with one numeric variable
 In this section we want to highlight the top 25 and the bottom 25 news websites that reported crimes, which would help decide which online newspaper are the most and least trustworthy.
+
+Variables: sources
+
+Method: We count the number of occurences of a specific source thorugh all the incidents reported. At the end, we sort by this number and plot a graph with the names of the online source and the number of news that each one has reported over the period. 
 ```{python}
 sourcesPerIncident = fullsetDF[["date", "sources"]]
 
@@ -725,6 +746,7 @@ for x in list(sortedSourcesLeastTrustful)[0:25]:
     appearancesLeastTrusful.append(x[1])
 ```
 
+For this information, we chose to display a lollipop graph which is very similar with the histograms, and we added the hover over the graph to see details for each record. 
 
 ```{r}
 library(plotly)
@@ -759,6 +781,8 @@ r_news <- py$sourceNews
 
 lollipop_function(r_source, r_news, "The most trustworthy websites that reported gun-violence incidents")
 ```
+
+From the above plot, we can observe that Chicago Suntimes is by far the platform that investigates and reports the majority of crime related news, with 7060 articles in those 6 years of this study. Above is the top 25 most trustworthy webistes, from which we can also see that Facebook and Twitter are also used for this kind of news.       
 
 ```{r}
 r_source <- py$sourcesLeastTrustful
