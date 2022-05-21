@@ -43,6 +43,8 @@ library(broom)
 library(geojsonsf)
 library(wordcloud2)
 library(RColorBrewer)
+library(dplyr)
+library(ggthemes)
 ```
 
 Python specific libraries import
@@ -776,46 +778,46 @@ incidentsForMap = np.array(incidentsPerState.values)
 
 ```
 
-# ```{r}
-# file <- system.file("examples", "us_states.json", package = "geojsonio")
-# spdf <- geojson_read(file, what = "sp")
-# 
-# spdf_fortified <- tidy(spdf, region = "id")
-# 
-# r_states <- py$statesForMap
-# r_incidents <- py$incidentsForMap
-# 
-# numericData <- data.frame(id = r_states, incidents = r_incidents)
-# 
-# spdf_fortified <- merge(spdf_fortified, numericData, by="id")
-# ```
+```{r}
+file <- system.file("examples", "us_states.json", package = "geojsonio")
+spdf <- geojson_read(file, what = "sp")
 
-# ```{r}
-# 
-# ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
-#     geom_polygon(aes(fill = incidents), color = "black", size = 0.1) + 
-#     coord_map() +
-#     labs(
-#       title = "US states map",
-#       subtitle = "Number of gun-violence incidents per state"
-#     ) +
-#     scale_fill_gradient(high = "#e34a33", low = "#fee8c8", guide = "colorbar") +
-#     theme(
-#       text = element_text(color = "#22211d"),
-#       plot.background = element_rect(fill = "#f5f5f2", color = NA),
-#       panel.background = element_rect(fill = "#f5f5f2", color = NA),
-#       legend.background = element_rect(fill = "#f5f5f2", color = NA),
-#   
-#       plot.title = element_text(size= 14, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
-#       plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
-#       plot.caption = element_text( size=12, color = "#4e4d47", margin = margin(b = 0.3, r=-99, unit = "cm") ),
-#   
-#       legend.position = c(0.9, 0.2)
-#     ) +
-#     xlim(c(-130, -65)) +
-#     ylim(c(20, 50))
-#     
-# ```
+spdf_fortified <- tidy(spdf, region = "id")
+
+r_states <- py$statesForMap
+r_incidents <- py$incidentsForMap
+
+numericData <- data.frame(id = r_states, incidents = r_incidents)
+
+spdf_fortified <- merge(spdf_fortified, numericData, by="id")
+```
+
+```{r}
+
+ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
+    geom_polygon(aes(fill = incidents), color = "black", size = 0.1) +
+    coord_map() +
+    labs(
+      title = "US states map",
+      subtitle = "Number of gun-violence incidents per state"
+    ) +
+    scale_fill_gradient(high = "#e34a33", low = "#fee8c8", guide = "colorbar") +
+    theme(
+      text = element_text(color = "#22211d"),
+      plot.background = element_rect(fill = "#f5f5f2", color = NA),
+      panel.background = element_rect(fill = "#f5f5f2", color = NA),
+      legend.background = element_rect(fill = "#f5f5f2", color = NA),
+
+      plot.title = element_text(size= 14, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm")),
+      plot.subtitle = element_text(size= 12, hjust=0.01, color = "#4e4d47", margin = margin(b = -0.1, t = 0.43, l = 2, unit = "cm")),
+      plot.caption = element_text( size=12, color = "#4e4d47", margin = margin(b = 0.3, r=-99, unit = "cm") ),
+
+      legend.position = c(0.9, 0.2)
+    ) +
+    xlim(c(-130, -65)) +
+    ylim(c(20, 50))
+
+```
 
 ### **Chart Type:** Scatter Plot
 The next analysis targets the number of females and males involved in incidents for each state.
@@ -848,6 +850,7 @@ We do have a lot of unknown locations, however, just to give an idea of where mo
 ```{python}
 column_names = ["word", "freq"]
 
+
 locationTypeTotal = pd.DataFrame(columns = column_names)
 
 for i in range (0, len(locationType)):
@@ -855,32 +858,193 @@ for i in range (0, len(locationType)):
     location = locationType[i]
     dfHelper = fullsetDF[fullsetDF["LocationType"]==location]["LocationType"].copy(deep=True)
     array.append(location)
-    array.append(dfHelper.count())
+    array.append(dfHelper.count().item())
 
     locationTypeTotal.loc[-1] = array
     locationTypeTotal.index = locationTypeTotal.index + 1
     locationTypeTotal = locationTypeTotal.sort_index()
+
+for i in range(0, len(locationTypeTotal)):
+    locationTypeTotal = locationTypeTotal.rename(index={i: locationTypeTotal["word"][i]})
+    
+words = np.array(locationTypeTotal["word"])
+freq = np.array(locationTypeTotal["freq"], dtype=int)
 ```
 
 ```{r}
-wordGraph <- function(dataFreq){
+wordGraph <- function(dataFreq) {
   wordcloud2(data=dataFreq, size=1)
 }
 ```
 
 ```{r}
-r_location <- py$locationTypeTotal
+r_words <- py$words
+r_freq <- py$freq
+r_location <- data.frame(word = r_words, freq = r_freq)
 
 wordGraph(r_location)
 ```
 
 As one would expect, the places with the highest rate of gun-violence are parks, apartments(i.e. at home), schools or bars.
-### **Chart Type:**
-We want to see the level of crime for each state proportional to the size of the population. We have previously calcuated the respective percentages and they will be ploted below, also adding tooltips to offer more details for each state.
 
-```{r}
+INSERT DESCRIPTION HERE:
+
+```{python}
+peopleAggregatedByDate = fullsetDF[["date", "MONTH", "YEAR", "n_killed", "n_injured", "n_guns_involved"]]
+
+peopleAggregatedByDate = peopleAggregatedByDate.groupby([peopleAggregatedByDate["YEAR"], peopleAggregatedByDate["MONTH"] ], as_index=False)\
+    .agg({"n_killed" : "sum", "n_injured" : "sum", "n_guns_involved" : "sum", "date": np.max}).sort_values("date", ascending=True)
+
+timeSeriesKilled = peopleAggregatedByDate[["date", "n_killed"]]
+timeSeriesInjured = peopleAggregatedByDate[["date", "n_injured"]]
+timeSeriesGuns = peopleAggregatedByDate[["date", "n_guns_involved"]]
+
+n_killed = ["n_killed"] * len(timeSeriesKilled)
+n_injured = ["n_injured"] * len(timeSeriesInjured)
+n_guns = ["n_guns"] * len(timeSeriesGuns)
+
+timeSeriesKilled = pd.DataFrame({
+    "date": timeSeriesKilled["date"].to_numpy(),
+    "variable": n_killed,
+    "value": timeSeriesKilled["n_killed"].to_numpy()
+})
+timeSeriesKilled["index"] = timeSeriesKilled.index
+
+timeSeriesInjured = pd.DataFrame({
+    "date": timeSeriesInjured["date"].to_numpy(),
+    "variable": n_injured,
+    "value": timeSeriesInjured["n_injured"].to_numpy()
+})
+timeSeriesInjured["index"] = timeSeriesInjured.index
+
+timeSeriesGuns = pd.DataFrame({
+    "date": timeSeriesGuns["date"].to_numpy(),
+    "variable": n_guns,
+    "value": timeSeriesGuns["n_guns_involved"].to_numpy()
+})
+timeSeriesGuns["index"] = timeSeriesGuns.index
+
+timeSeries = pd.concat([timeSeriesKilled, timeSeriesInjured, timeSeriesGuns])
+timeSeriesDate = timeSeries["date"].to_numpy()
+timeSeriesValue = timeSeries["value"].to_numpy()
+timeSeriesIndex = timeSeries["index"].to_numpy()
+timeSeriesVariable = timeSeries["variable"].to_numpy()
+
+filteredDataAfterFirstYear = timeSeriesKilled[pd.to_datetime(timeSeriesKilled["date"]) >= pd.to_datetime('2014-01-01')]
+filteredDataInjuredAfterFirstYear = timeSeriesInjured[pd.to_datetime(timeSeriesInjured["date"]) >= pd.to_datetime('2014-01-01')]
+filteredDataGunsAfterFirstYear = timeSeriesGuns[pd.to_datetime(timeSeriesGuns["date"]) >= pd.to_datetime('2014-01-01')]
 
 ```
 
+```{r}
+r_date = py$filteredDataAfterFirstYear["date"]
+r_value = py$filteredDataAfterFirstYear["value"]
+data = data.frame(date = r_date, value = r_value)
+
+data$date <- as.POSIXct(data$date, format = "%Y-%m-%d")
+
+ggplot(data, aes(x=date, y=value)) +
+  geom_point() +
+  ggtitle("Evolution of number of murders in time after 2014") +
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+```{r}
+r_date = py$filteredDataInjuredAfterFirstYear["date"]
+r_value = py$filteredDataInjuredAfterFirstYear["value"]
+data = data.frame(date = r_date, value = r_value)
+
+data$date <- as.POSIXct(data$date, format = "%Y-%m-%d")
+
+ggplot(data, aes(x=date, y=value)) +
+  geom_point() +
+  ggtitle("Evolution of number of injured people in time after 2014") +
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+```{r}
+r_date = py$filteredDataGunsAfterFirstYear["date"]
+r_value = py$filteredDataGunsAfterFirstYear["value"]
+data = data.frame(date = r_date, value = r_value)
+
+data$date <- as.POSIXct(data$date, format = "%Y-%m-%d")
+
+ggplot(data, aes(x=date, y=value)) +
+  geom_point() +
+  ggtitle("Evolution of number of guns invloved in crimes over time after 2014") +
+  geom_smooth(method=lm , color="red", fill="#69b3a2", se=TRUE) +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )
+```
+```{r}
+names = c("n_killed", "n_injured", "n_guns")
+r_dates = py$timeSeriesDate
+data = data.frame(x = py$timeSeriesDate, y = py$timeSeriesValue, variable=py$timeSeriesVariable, color=py$timeSeriesVariable)
+
+data$x <- as.POSIXct(data$x, format = "%Y-%m-%d")
+
+options(width = 800, height = 3)
+ggplot(data, aes(x = x, y = y, group = variable, color = color)) +
+    geom_line(linetype = 1, lwd = 0.5) +
+    geom_point() +
+    scale_color_viridis(discrete = TRUE) + theme_bw() +
+    ggtitle("Evolution in time of number of murders, injured people and used guns") +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "white"), 
+      axis.text.x = element_text(angle = 90, size = 7),
+      axis.line = element_line(colour = "darkblue", size = 0.7, linetype = "solid"),
+      legend.position=c(0.1, 0.8)
+    ) +
+    transition_reveal(data$x)
+
+
+```
+```{python}
+fullsetDF["people_involved"] = fullsetDF["MALES"] + fullsetDF["FEMALES"]
+dataForNumberOfPeopleVsKilled = fullsetDF[["YEAR", "n_killed", "people_involved", "state", "city_or_county", "Mass Shooting"]]
+print(dataForNumberOfPeopleVsKilled.head())
+
+n_people = dataForNumberOfPeopleVsKilled["people_involved"]
+n_killed = dataForNumberOfPeopleVsKilled["n_killed"]
+state = dataForNumberOfPeopleVsKilled["state"]
+city = dataForNumberOfPeopleVsKilled["city_or_county"]
+years = dataForNumberOfPeopleVsKilled["YEAR"]
+mass_shooting = dataForNumberOfPeopleVsKilled["Mass Shooting"]
+```
+
+```{r}
+r_n_people <- py$n_people
+r_n_killed <- py$n_killed
+r_state <- py$state
+r_city <- py$city
+r_years <- as.numeric(py$years)
+r_mass_shooting <- py$mass_shooting
+
+data = data.frame(x = r_n_people, y = r_n_killed, color=r_mass_shooting, years=r_years)
+
+ggplot(data, aes(x=r_n_people, y=r_n_killed, color=r_mass_shooting)) +
+  geom_point(alpha = 0.7, stroke = 0) +
+  theme_classic() +
+  scale_size(range=c(2,12), guide="none") +
+  labs(title = "Number of people involved VS number of people killed for the same incident",
+       x = "People involved",
+       y = "People killed",
+       color = "Mass Shooting") +
+  theme(axis.title = element_text(),
+        legend.text = element_text(size = 6)) +
+  scale_color_brewer(palette = "Set2") +
+  transition_time(years) +
+  labs(subtitle = "Year: {frame_time}") +
+  shadow_wake(wake_length = 0.1) +
+  ease_aes('linear')
+```
 
 # Overall Conclusions
