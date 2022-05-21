@@ -393,7 +393,10 @@ We would also like to have an overview of the age groups across the outlier stat
 ```{python}
 # Percentages per group for each state
 for j in range(0, 3):
-    total = totalsStates[0][j] + totalsStates[1][j] + totalsStates[2][j]
+    total = 0
+    for i in range(0, len(outlierList)):
+        total = total + totalsStates[i][j]
+
     for i in range(0, len(outlierList)):
         totalsStates[i][j] = float("{:.4f}".format(totalsStates[i][j] / total))*100
 totalsStates = totalsStates.transpose()
@@ -407,7 +410,9 @@ for(row in 1 : nrow(matrix)){
 }
 ```
 
-The differences between the states are generally not that significant, the percentages for each age group are somewhere around 25-40%. However, we notice one glaring exception for the state of Texas which has the highest percentage of children involved in gun-violence incidents (around 60%).
+For the Adults category, the differences between the states are generally not that significant, the percentages for each state are somewhere around 25-40%. 
+The results for the other two categories have, however, glaring differences.
+for the state of Texas which has the highest percentage of children involved in gun-violence incidents (around 60%).
 
 ### **Chart Type:** Circular BarPlot with one numeric variable
 The purpose of the next section is to identify the number of guns used in all the incidents per state. We have noticed that there are several incidents with at least 3 guns involved.
@@ -465,6 +470,17 @@ for i in range(0, len(incidentType)):
 
         typeTotalPerState[it] = dfHelper.count()
         it = it + 1
+
+def dataCleaning(dataframe):
+  allYears = [2013, 2014, 2015, 2016, 2017, 2018]
+  for i in range(0, len(statesAll)):
+      for j in range(i*6, i*6+6):
+          year = allYears[j - i*6]
+          if (dataframe.iloc[j]["YEAR"] != year):
+              insertValue = [statesAll[i], year, 0]
+              insertRow(j, dataframe, insertValue)
+              dataframe = dataframe.sort_index(axis=0)
+              j = j-1
 ```
 
 ```{r}
@@ -485,7 +501,7 @@ ggplot(data, aes(X, Y, fill=Z)) +
 
 
 ### **Chart Type:** Trending Animated Bar Chart
-We first calculate the number of people injured or killed (respectively) for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
+We first calculate the number of people injuries for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
 ```{python}
 statesAll = stateCodesDF["State"]
 def insertRow(row_number, df, row_value):
@@ -499,26 +515,19 @@ def insertRow(row_number, df, row_value):
     index_ = upper_half + lower_half
     df.index = index_
     df.loc[row_number] = row_value
+```
 
-peopleKilledByStateandDate = fullsetDF[["state", "YEAR", "n_killed"]]
-peopleKilledByStateandDate = peopleKilledByStateandDate.groupby([peopleKilledByStateandDate["state"], peopleKilledByStateandDate["YEAR"]], as_index=False).agg({"n_killed" : "sum"})
-peopleKilledByStateandDate.rename(columns = {'n_killed':'var'}, inplace = True)
+```{python}
+peopleInjuredByStateandDate = fullsetDF[["state", "MONTH", "YEAR", "n_injured"]]
+peopleInjuredByStateandDate = peopleInjuredByStateandDate.groupby([peopleInjuredByStateandDate["state"], peopleInjuredByStateandDate["YEAR"]], as_index=False).agg({"n_injured" : "sum"})
 
-def dataCleaning(dataframe):
-  allYears = [2013, 2014, 2015, 2016, 2017, 2018]
-  for i in range(0, len(statesAll)):
-      for j in range(i*6, i*6+6):
-          year = allYears[j - i*6]
-          if (dataframe.iloc[j]["YEAR"] != year):
-              insertValue = [statesAll[i], year, 0]
-              insertRow(j, dataframe, insertValue)
-              dataframe = dataframe.sort_index(axis=0)
-              j = j-1
+peopleInjuredByStateandDate.rename(columns = {'n_injured':'var'}, inplace = True)
 
-dataCleaning(peopleKilledByStateandDate)
+dataCleaning(peopleInjuredByStateandDate)
 ```
 
 ```{r}
+myColors <- c("#cd0000", "#dc4c4c", "#f97300", "#00baba", "#e5dcd6", "#eff0ff", "#bccaff", "#87a0ff", "#577aff", "#2451ff", "#b3e1d9", "#18beaf", "#10736e", "#d4bf84", "#77320b", "#02b9c7", "#ccc8c3", "#56e8ea", "#b91b4b", "#8a3d01", "#fd69b3", "#550080", "#daf7a6", "#000084", "#ff6600", "#bc4b4b", "#140e00", "#0000ff", "#000000", "#eeeeee", "#e47cd2", "#bbedf9", "#fde6c8", "#fac813", "#009e7e", "#325da7", "#f68c06", "#f7f7f7", "#ffffff", "#181818", "#9aa7d0", "#b7b6f9", "#05014a", "#a03b3b", "#ffebcd", "#854442", "#0f403f", "#3b2f2f", "#0488c2", "#03a086")
 rankingPlot <- function(data, plot_title){
 
   totalIncidentsRankingBarChart <- ggplot(data, aes(rank, group = state, fill = as.factor(state), color = as.factor(state))) + 
@@ -540,7 +549,9 @@ rankingPlot <- function(data, plot_title){
       plot.title = element_text(size = 25),
       legend.position = "none",
       plot.margin = margin(4, 4, 4, 4, "cm")
-  )
+    ) + 
+    scale_color_manual(values=myColors) + 
+    scale_fill_manual(values=myColors)
   anim <- totalIncidentsRankingBarChart + 
     transition_states(YEAR, transition_length = 5, state_length = 5) +
     view_follow(fixed_x = TRUE) +
@@ -553,8 +564,6 @@ rankingPlot <- function(data, plot_title){
 ```
 
 ```{r}
-r_totalPerState <- py$peopleKilledByStateandDate
-
 dataPrep <- function(dataframe){
   dataframe <- dataframe %>%
   group_by(YEAR) %>%
@@ -565,21 +574,6 @@ dataPrep <- function(dataframe){
   filter(rank <=10) %>%
   ungroup()
 }
-
-r_totalPerState <- dataPrep(r_totalPerState)
-
-rankingPlot(r_totalPerState, 'Ranking of total number of deaths per year: {closest_state}')
-```
-
-
-The same process described above was followed for the number of injuries.
-```{python}
-peopleInjuredByStateandDate = fullsetDF[["state", "MONTH", "YEAR", "n_injured"]]
-peopleInjuredByStateandDate = peopleInjuredByStateandDate.groupby([peopleInjuredByStateandDate["state"], peopleInjuredByStateandDate["YEAR"]], as_index=False).agg({"n_injured" : "sum"})
-
-peopleInjuredByStateandDate.rename(columns = {'n_injured':'var'}, inplace = True)
-
-dataCleaning(peopleInjuredByStateandDate)
 ```
 
 ```{r}
@@ -588,6 +582,23 @@ r_totalPerState <- py$peopleInjuredByStateandDate
 r_totalPerState <- dataPrep(r_totalPerState)
 
 rankingPlot(r_totalPerState, 'Ranking of total number of injuries per year: {closest_state}')
+```
+
+The same process described above was followed for the number of deaths
+```{python}
+peopleKilledByStateandDate = fullsetDF[["state", "YEAR", "n_killed"]]
+peopleKilledByStateandDate = peopleKilledByStateandDate.groupby([peopleKilledByStateandDate["state"], peopleKilledByStateandDate["YEAR"]], as_index=False).agg({"n_killed" : "sum"})
+peopleKilledByStateandDate.rename(columns = {'n_killed':'var'}, inplace = True)
+
+dataCleaning(peopleKilledByStateandDate)
+```
+
+```{r}
+r_totalPerState <- py$peopleKilledByStateandDate
+
+r_totalPerState <- dataPrep(r_totalPerState)
+
+rankingPlot(r_totalPerState, 'Ranking of total number of deaths per year: {closest_state}')
 ```
 
 ### **Chart Type:** Doughnut Chart
