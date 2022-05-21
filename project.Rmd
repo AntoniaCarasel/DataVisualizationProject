@@ -69,7 +69,7 @@ fullsetDF = fullsetDF.drop("incident_id", axis = 1)
 fullsetDF = fullsetDF.drop("incident_url_fields_missing", axis = 1)
 ```
 ## Processing
-We have split the date into months and years sine this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
+We have split the date into months and years since this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
 ```{python}
 def splitDates(datesList):
     months = []
