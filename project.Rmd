@@ -22,7 +22,6 @@ Three data sets have been used, the primary one which includes the topic specifi
 The data source for the project is Kaggle.
 
 * Primary dataset: <https://www.kaggle.com/datasets/jameslko/gun-violence-data>
-* Population split by state: <https://www.kaggle.com/datasets/peretzcohen/2019-census-us-population-data-by-state>
 * US State codes: <https://worldpopulationreview.com/states/state-abbreviations>
 
 # Settings
@@ -70,7 +69,7 @@ fullsetDF = fullsetDF.drop("incident_id", axis = 1)
 fullsetDF = fullsetDF.drop("incident_url_fields_missing", axis = 1)
 ```
 ## Processing
-We have split the date into months and years sine this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
+We have split the date into months and years since this information will be used later on when studying the changes over the years and if there are any "seasonal changes".
 ```{python}
 def splitDates(datesList):
     months = []
@@ -197,12 +196,15 @@ fullsetDF.to_csv("gun-violence_processed-data.csv")
 ```
 
 # Graphs
-## Initial exploration of the dataset
+## Initial Data Exploration
+We will start by using some simple plots to get a first view of the data analyzed.
 ### **Chart Type:** Barplot with one numeric variable
 Calculating total numbers of
+
   * incidents that occured 
   * cases that resulted in killings
   * cases that resulted in injuries
+
 in each state, regardless of month or year.
 ```{python}
 totalPerState = []
@@ -224,7 +226,7 @@ for i in range (0, len(stateCodesDF)):
 stateCodes = stateCodesDF["Code"]
 ```
 
-We have defined a function for this type of plot and called it for each of the scenarios.
+We have defined a function for this type of plot and called it for each of the scenarios. A barplot uses a single numeric variable and a categoric variable.
 ```{r}
 initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_title, colour){
   
@@ -245,9 +247,11 @@ initial_eda_barplots <- function(all_labels, all_values, x_name, y_name, plot_ti
 }
 ```
 
-**Variable: Total number of incidents that occured**
+We first want to see the distribution of the total number of incidents per each state. We will use the `totalPerState` dataframe and the codes from the `stateCodes` array.
 
-We want to see the distribution of the total number of incidents per each state. We will use the `totalPerState` dataframe and the codes from the `stateCodes` array.
+**Numeric Variable: Total number of incidents that occured**
+
+**Categoric Variable: State codes**
 ```{r}
 r_totalPerState <- py$totalPerState
 r_labels <- py$stateCodes
@@ -257,28 +261,37 @@ initial_eda_barplots(r_labels, r_totalPerState, "State Code", "Number of inciden
 
 The general level of incidents can roughly be found somewhere in the interval [0,5000], but we do see some outliers - states have a significantly higher number of gun-involved cases.
 
-**Variable: Total number of cases that resulted in deaths**
+**Numeric Variable: Total number of cases that resulted in deaths**
+
+**Categoric Variable: State codes**
 ```{r}
 r_totalKillingsPerState <- py$totalKillingsPerState
 
 initial_eda_barplots(r_labels, r_totalKillingsPerState, "State Code", "Number of killings", "Distribution of cases that resulted in killings per State", "#652194")
 ```
 
-The number of deaths for most states lies between 0 and 3000, with the overwhelming majority being between 0 and 2000. Outlier values go up to 5000
+The number of deaths for most states lies between 0 and 3000, with the overwhelming majority being between 0 and 2000. Outlier values go up to 5000.
 
-**Variable: Total number of cases that resulted in injuries**
+**Numeric Variable: Total number of cases that resulted in injuries**
+
+**Categoric Variable: State codes**
 ```{r}
 r_totalInjuriesPerState <- py$totalInjuriesPerState
 
 initial_eda_barplots(r_labels, r_totalInjuriesPerState, "State Code", "Number of injuries", "Distribution of cases that resulted in injuries per State", "#134611")
 ```
 
-Number of injuries per state is between 0 and 6000 for all states but one - that exception being over 9000
+Number of injuries per state is between 0 and 6000 for all states but one - that exception being over 9000.
 
-Outlier values can be noticed in the last two charts as well. Given this observation, it would make sense to realize another chart - a Boxplot - that would specifically highlight this information. Even though boxplots can sometimes be missleading because of the loss of information, our purpose for this scenario is to identify those states that do not fall into the IQR (Interquantile Range), purpose which makes this type of chart appropiate.
+Outlier values can be noticed in the last two charts as well. Given this observation, it would make sense to realize another chart - a Boxplot - that would specifically highlight this information. Even though boxplots can sometimes be misleading because of the loss of information, our purpose for this scenario is to identify those states that do not fall into the IQR (Interquantile Range), purpose which makes this type of chart appropriate.
 
 ### **Chart Type:** Boxplot with three series
-**Variables: Total number of incidents, firearm deaths and injuries, respectively**
+A boxplot uses one or more numeric variables and since we would like to make a comparison between the three series, we will plot them all together.
+
+**Three Numeric Variables:**
+  **Total number of incidents for each state**
+  **Total number of firearm deaths for each state**
+  **Total number of firearm injuries for each state**
 ```{r}
 r_totalPerState <- py$totalPerState
 r_totalKillingsPerState <- py$totalKillingsPerState
@@ -379,7 +392,7 @@ ggplot(data, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill=name)) +
 }
 ```
   
-**Variables: Percentage of each age group involved in an incident per state and across the states.**
+**Numeric Variables: Percentage of each age group involved in an incident in one state**
 ```{r}
 r_categories <- py$categories
 r_outlierList <- py$outlierList
@@ -391,7 +404,10 @@ for(row in 1 : nrow(matrix)){
 }
 ```
 
-We would also like to have an overview of the age groups across the outlier states to see if there are any differences between the states. We could assume that some of the states have a higher percentage of teenagers involved in gun-voilence than others.
+In all of the four graphs we can see that the majority of people involved in gun-violence are adults, followed by teenagers and the children. This might be an expected result, howver plotting this information made us discover that there are differences in the age group percentages across the states. 
+
+For this reason, we will also design an overview of the age groups across the outlier states to gain a better understanding of the aspect we just noticed.
+
 ```{python}
 # Percentages per group for each state
 for j in range(0, 3):
@@ -404,6 +420,7 @@ for j in range(0, 3):
 totalsStates = totalsStates.transpose()
 ```
 
+**Numeric Variables: Percentage per state for one age group**
 ```{r}
 matrix <- py$totalsStates
 for(row in 1 : nrow(matrix)){
@@ -412,12 +429,15 @@ for(row in 1 : nrow(matrix)){
 }
 ```
 
-For the Adults category, the differences between the states are generally not that significant, the percentages for each state are somewhere around 25-40%. 
-The results for the other two categories have, however, glaring differences.
-for the state of Texas which has the highest percentage of children involved in gun-violence incidents (around 60%).
+For the Adults category, the differences between the states are generally not that significant, the values for each state being somewhere around 25-40%.
 
-### **Chart Type:** Circular BarPlot with one numeric variable
-The purpose of the next section is to identify the number of guns used in all the incidents per state. We have noticed that there are several incidents with at least 3 guns involved.
+The results for the other two categories have, however, glaring differences. The percentage of children involved is higher in the state of Texas and Florida than in the other two states, while the percentage of Teenagers is higher in Illinois and Florida.
+
+### **Chart Type:** Circular BarPlot
+Circular Barplots are a variation of the a barplot and it uses one numerical variable and one categorical.
+
+The purpose of the following section is to identify the number of guns used in all the incidents per state. We have noticed that there are several incidents with at least 3 guns involved.
+
 ```{python}
 gunsTotalPerState = []
 for i in range (0, len(stateCodesDF)):
@@ -449,17 +469,22 @@ circular_barplot <- function(all_labels, all_values, x_name, y_name, plot_title,
 }
 ```
 
+**Numeric Variable: Total number of guns**
+
+**Categoric Variable: State codes**
 ```{r}
 r_gunsTotalPerState <- py$gunsTotalPerState
 
 circular_barplot(r_labels, r_gunsTotalPerState, "State Code", "Number of guns", "Distribution of no of guns involved per State", "#091CC1")
 ```
 
-We can clearly see that there are several states where the number of guns is a lot higher, specifically California, Florida, Texas and Illinois.
+We can clearly see that there are several states where the number of guns is a lot higher, specifically California, Florida, Texas and Illinois. As we remember from the initial plots, these are the exact states that had the highest number of incidents as well.
 
-As we remember from the initial plots, these are the exact states that had the highest number of incidents as well.
+## Further Analysis
 ### **Chart Type:** Heatmap
-The 2 categorical variables that are taken into account for this type of chart are the `IncidentType` and the `States`. We have previously split the incidet type into 7 different categories. We would now like to make an analysis of the causes of gun-violence, i.e. how often each type occurs for the individual states.
+The variables used for a heatmap are two categoric ones.
+
+We have previously split the incident type into 7 different categories. We would now like to make an analysis of the causes of gun-violence, i.e. how often each type occurs for the individual states.
 ```{python}
 typeTotalPerState = np.empty(shape=(len(incidentType)*len(stateCodesDF)))
 it = 0
@@ -485,6 +510,7 @@ def dataCleaning(dataframe):
               j = j-1
 ```
 
+**Categorical variables: Incident Type and the States Codes**
 ```{r}
 r_typeTotalPerState <- py$typeTotalPerState
 x <- py$stateCodes
@@ -501,9 +527,12 @@ ggplot(data, aes(X, Y, fill=Z)) +
   )
 ```
 
+The most common type of incident is a mass shooting, followed by gang fights, while the other types (such as domestic violence, home invasion etc.) are less common.
 
 ### **Chart Type:** Trending Animated Bar Chart
-We first calculate the number of people injuries for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
+This type of graph uses the same information as a standard Bar Chart (i.e. one numeric variable), but additionally uses a time component.
+
+We first calculate the number of people injured for each state during each year available in the given dataset. We noticed that for certain years and states, there were no incidents reported and as such, those entries needed to be added to the dataframe with the value 0 in order to be able to plot the data.
 ```{python}
 statesAll = stateCodesDF["State"]
 def insertRow(row_number, df, row_value):
@@ -578,6 +607,7 @@ dataPrep <- function(dataframe){
 }
 ```
 
+**Numeric Variable: Total number of injuries for each state for each year**
 ```{r}
 r_totalPerState <- py$peopleInjuredByStateandDate
 
@@ -585,6 +615,8 @@ r_totalPerState <- dataPrep(r_totalPerState)
 
 rankingPlot(r_totalPerState, 'Ranking of total number of injuries per year: {closest_state}')
 ```
+
+Illinois has the highest level of injuries during the past couple of years, followed by California and Florida. A slight overall decrease can be noticed.
 
 The same process described above was followed for the number of deaths
 ```{python}
@@ -595,6 +627,7 @@ peopleKilledByStateandDate.rename(columns = {'n_killed':'var'}, inplace = True)
 dataCleaning(peopleKilledByStateandDate)
 ```
 
+**Numeric Variable: Total number of deaths for each state for each year**
 ```{r}
 r_totalPerState <- py$peopleKilledByStateandDate
 
@@ -602,6 +635,85 @@ r_totalPerState <- dataPrep(r_totalPerState)
 
 rankingPlot(r_totalPerState, 'Ranking of total number of deaths per year: {closest_state}')
 ```
+
+California and Texas have the highest number of incidents that resulted in deaths. There is no clear trend of either decrease or increase in the numbers.
+
+### **Chart Type:** Scatter Plot
+The next analysis targets the number of females and males involved in incidents for each state as we want to see if this might also be considered a factor. Statistics generally show that women commit less crimes than men. However, this is a very general statement and we want to see if it is also applicable for gun-involved incidents in our time frame.
+
+A scatter plot uses two unordered numeric variables.
+```{python}
+malefemaleDistribution = fullsetDF[["state", "FEMALES", "MALES"]]
+malefemaleDistribution = malefemaleDistribution.groupby([malefemaleDistribution["state"]], as_index=False).agg({"FEMALES" : "sum", "MALES" : "sum"})
+malefemaleDistribution = malefemaleDistribution[["FEMALES", "MALES"]]
+
+malefemaleDistribution.index = statesAll
+```
+
+```{r}
+simpleScatter <- function(data){
+  ggplot(data, aes(x=FEMALES, y=MALES)) + 
+    geom_point() +
+    geom_text(label=rownames(data), check_overlap = T)
+}
+```
+
+**Numeric Variables: Total number of females involved, Total number of males involved**
+```{r}
+r_data <- py$malefemaleDistribution
+
+simpleScatter(r_data)
+```
+
+The distribution between the two is fairly equal. We do see some states that have a higher level of males involved (Illinois or California, Arkansas), but we also see states with a higher number of females involved (Florida, Texas, Georgia).
+
+### **Chart Type:** WordCloud
+A wordcloud uses a numeric and a categoric variable. It uses a list of words, each of them having a frquency which is expressed in the graph through the size of the word shown.
+
+Lastly, we want to see if there are locations where the level of crime is higher than in the others. We do have a lot of unknown locations in the dataset, however, just to give an idea of where most incidents occurred, we have plotted a Word Chart as seen below.
+
+```{python}
+column_names = ["word", "freq"]
+
+
+locationTypeTotal = pd.DataFrame(columns = column_names)
+
+for i in range (0, len(locationType)):
+    array = []
+    location = locationType[i]
+    dfHelper = fullsetDF[fullsetDF["LocationType"]==location]["LocationType"].copy(deep=True)
+    array.append(location)
+    array.append(dfHelper.count().item())
+
+    locationTypeTotal.loc[-1] = array
+    locationTypeTotal.index = locationTypeTotal.index + 1
+    locationTypeTotal = locationTypeTotal.sort_index()
+
+for i in range(0, len(locationTypeTotal)):
+    locationTypeTotal = locationTypeTotal.rename(index={i: locationTypeTotal["word"][i]})
+    
+words = np.array(locationTypeTotal["word"])
+freq = np.array(locationTypeTotal["freq"], dtype=int)
+```
+
+```{r}
+wordGraph <- function(dataFreq) {
+  wordcloud2(data=dataFreq, size=1)
+}
+```
+
+**Numeric Variable: The total number of incidents recorded at each known venue**
+
+**Categoric Variable: The list of venues**
+```{r}
+r_words <- py$words
+r_freq <- py$freq
+r_location <- data.frame(word = r_words, freq = r_freq)
+
+wordGraph(r_location)
+```
+
+As one would expect, the places with the highest rate of gun-violence are parks, apartments(i.e. at home), schools or bars.
 
 ### **Chart Type:** Doughnut Chart
 We want
@@ -793,7 +905,6 @@ lollipop_function(r_source, r_news, "The least trustworthy websites that reporte
 
 ### **Chart Type:** Choropleth charts
 
-
 ```{python}
 incidentsPerState = fullsetDF["state"].value_counts(ascending=False)
 
@@ -843,73 +954,6 @@ ggplot(data = spdf_fortified, aes( x = long, y = lat, group = group)) +
 
 ```
 
-### **Chart Type:** Scatter Plot
-The next analysis targets the number of females and males involved in incidents for each state.
-```{python}
-malefemaleDistribution = fullsetDF[["state", "FEMALES", "MALES"]]
-malefemaleDistribution = malefemaleDistribution.groupby([malefemaleDistribution["state"]], as_index=False).agg({"FEMALES" : "sum", "MALES" : "sum"})
-malefemaleDistribution = malefemaleDistribution[["FEMALES", "MALES"]]
-
-malefemaleDistribution.index = statesAll
-```
-
-```{r}
-simpleScatter <- function(data){
-  ggplot(data, aes(x=FEMALES, y=MALES)) + 
-    geom_point() +
-    geom_text(label=rownames(data), check_overlap = T)
-}
-```
-
-```{r}
-r_data <- py$malefemaleDistribution
-
-simpleScatter(r_data)
-```
-
-### **Chart Type:** WordCloud
-We do have a lot of unknown locations, however, just to give an idea of where most incidents occurred, we have plotted a Word Chart as seen below.
-
-**Variable:** The total number of incidents recorded at each known venue
-```{python}
-column_names = ["word", "freq"]
-
-
-locationTypeTotal = pd.DataFrame(columns = column_names)
-
-for i in range (0, len(locationType)):
-    array = []
-    location = locationType[i]
-    dfHelper = fullsetDF[fullsetDF["LocationType"]==location]["LocationType"].copy(deep=True)
-    array.append(location)
-    array.append(dfHelper.count().item())
-
-    locationTypeTotal.loc[-1] = array
-    locationTypeTotal.index = locationTypeTotal.index + 1
-    locationTypeTotal = locationTypeTotal.sort_index()
-
-for i in range(0, len(locationTypeTotal)):
-    locationTypeTotal = locationTypeTotal.rename(index={i: locationTypeTotal["word"][i]})
-    
-words = np.array(locationTypeTotal["word"])
-freq = np.array(locationTypeTotal["freq"], dtype=int)
-```
-
-```{r}
-wordGraph <- function(dataFreq) {
-  wordcloud2(data=dataFreq, size=1)
-}
-```
-
-```{r}
-r_words <- py$words
-r_freq <- py$freq
-r_location <- data.frame(word = r_words, freq = r_freq)
-
-wordGraph(r_location)
-```
-
-As one would expect, the places with the highest rate of gun-violence are parks, apartments(i.e. at home), schools or bars.
 
 INSERT DESCRIPTION HERE:
 
@@ -975,6 +1019,7 @@ ggplot(data, aes(x=date, y=value)) +
     axis.text.x = element_text(angle = 90)
   )
 ```
+
 ```{r}
 r_date = py$filteredDataInjuredAfterFirstYear["date"]
 r_value = py$filteredDataInjuredAfterFirstYear["value"]
@@ -990,6 +1035,7 @@ ggplot(data, aes(x=date, y=value)) +
     axis.text.x = element_text(angle = 90)
   )
 ```
+
 ```{r}
 r_date = py$filteredDataGunsAfterFirstYear["date"]
 r_value = py$filteredDataGunsAfterFirstYear["value"]
@@ -1005,6 +1051,7 @@ ggplot(data, aes(x=date, y=value)) +
     axis.text.x = element_text(angle = 90)
   )
 ```
+
 ```{r}
 names = c("n_killed", "n_injured", "n_guns")
 r_dates = py$timeSeriesDate
@@ -1031,6 +1078,7 @@ ggplot(data, aes(x = x, y = y, group = variable, color = color)) +
 
 
 ```
+
 ```{python}
 fullsetDF["people_involved"] = fullsetDF["MALES"] + fullsetDF["FEMALES"]
 dataForNumberOfPeopleVsKilled = fullsetDF[["YEAR", "n_killed", "people_involved", "state", "city_or_county", "Mass Shooting"]]
@@ -1072,3 +1120,9 @@ ggplot(data, aes(x=r_n_people, y=r_n_killed, color=r_mass_shooting)) +
 ```
 
 # Overall Conclusions
+A couple of conclusions can be drawn from the analysis undertaken, especially in relation to the impact several factor have on the level of gun-violence.
+
+There are four states where the criminality rate is significant higher than in the others, some of them actually having a incredibly high number of children and teenagers involved. Most of the incidents were mass shooting.
+
+More incidents were recorded in the Eastern part of the country than in the Western.
+The gender of the participants is less relevant, 
